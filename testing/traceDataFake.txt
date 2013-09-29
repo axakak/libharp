@@ -10,7 +10,7 @@ pattern:
 workspace: in air
 coordinate-space: world
 total-time: 11198.3
-data: 
+events: 
 - [x, y, z, time]
 - [38.2361, -20.8930, 20.4274, 0.0]
 - [38.2361, -20.8930, 20.4274, 1.1]

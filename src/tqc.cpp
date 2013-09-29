@@ -15,7 +15,10 @@ int main(int argc, char** argv)
 
   cout << "patient-id: " << trace.getPaitentID() << endl
        << "total-time: " << trace.getTotalTime() << endl
-       << endl;
+       << "events:" << endl;
+
+  for(int i = 0; i < 20; i++)
+    cout << trace.getEvent(i) << endl;
 
   return 0;
 }
