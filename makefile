@@ -1,7 +1,7 @@
 
 OUT = tqc
 TARGET = bin/$(OUT)
-FLAGS = -ansi -Wall
+FLAGS = -ansi -Wall -g
 OBJS = tmp/$(OUT).o
 
 YAML_CPP_DIR = /usr/local/Cellar/yaml-cpp/0.5.1
