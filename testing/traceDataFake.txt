@@ -2,7 +2,6 @@
 ---
 patient-id: 0
 date: Mon Jul 29 02:32:53 2013
-
 location: 
 pattern: 
   type: straight to Curvy

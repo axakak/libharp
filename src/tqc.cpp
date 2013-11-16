@@ -1,5 +1,4 @@
 
-
 #include "traceData.h"
 #include <iostream>
 
@@ -17,7 +16,9 @@ int main(int argc, char** argv)
        << "total-time: " << trace.getTotalTime() << endl
        << "events:" << endl;
 
-  for(int i = 0; i < 20; i++)
+  trace.normalizeEvents();
+
+  for(int i = 0; i < trace.size(); i+=1000)
     cout << trace.getEvent(i) << endl;
 
   return 0;
