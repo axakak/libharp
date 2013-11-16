@@ -1,7 +1,43 @@
 #include "traceData.h"
 
+
+ostream& operator<< (ostream& stream, Event e)
+{
+  stream << "x: " << e.x << " "
+         << "y: " << e.y << " "
+         << "z: " << e.z << " "
+         << "time: " << e.time;
+
+  return stream;
+}
+
+
 TraceData::TraceData(): patientID(0), totalTime(0)
 {
+}
+
+
+int TraceData::getPaitentID()
+{
+  return patientID;
+}
+
+
+double TraceData::getTotalTime()
+{
+  return totalTime;
+}
+
+
+Event TraceData::getEvent(int i)
+{
+  return events[i];
+}
+
+
+size_t TraceData::size()
+{
+  return events.size();
 }
 
 
@@ -73,20 +109,5 @@ void TraceData::normalizeEvents()
     eit->z = (eit->z - eMin.z) * eScale.z;
     eit->time = eit->time * eScale.time;
   }
-}
-
-
-/******************************************************************************
-* Non-member Functions
-******************************************************************************/
-
-ostream& operator << (ostream& stream, Event e)
-{
-  stream << "x: " << e.x << " "
-         << "y: " << e.y << " "
-         << "z: " << e.z << " "
-         << "time: " << e.time;
-
-  return stream;
 }
 

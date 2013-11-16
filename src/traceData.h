@@ -1,6 +1,4 @@
-// traceDate.cpp
-//
-//
+// traceDate.h
 #ifndef TRACE_DATA_H
 #define TRACE_DATA_H
 
@@ -11,7 +9,6 @@
 //3rd party libs
 #include <yaml-cpp/yaml.h>
 
-
 #define PI 3.1415926535897932
 
 using namespace std;
@@ -21,6 +18,7 @@ struct Event
   double x,y,z,time;
 };
 
+ostream& operator<< (ostream& stream, Event e);
 
 class TraceData 
 {
@@ -31,11 +29,10 @@ public:
   void loadYamlFile(char* traceFile);
 
   //get functions
-  int getPaitentID() {return patientID;}
-  double getTotalTime() {return totalTime;}
-  Event getEvent(int i) {return events[i];}
-
-  size_t size() {return events.size();}
+  int getPaitentID();
+  double getTotalTime();
+  Event getEvent(int i);
+  size_t size();
 
   void normalizeEvents();
 
@@ -44,5 +41,6 @@ private:
   double totalTime;
   vector<Event> events;
 };
+
 
 #endif //TRACE_DATA_H
