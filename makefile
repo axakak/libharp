@@ -1,7 +1,7 @@
 
 OUT = tqc
 TARGET = bin/$(OUT)
-FLAGS = -ansi -Wall -g
+FLAGS = -std=c++11 -ansi -Wall -g -Wno-c++11-extensions
 OBJS = tmp/$(OUT).o \
        tmp/traceData.o
 
