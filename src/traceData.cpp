@@ -1,14 +1,45 @@
 #include "traceData.h"
 
+#include <iostream>
+#include <sstream>
+#include <iomanip>
 
-ostream& operator<< (ostream& stream, Event e)
+ostream& operator<< (ostream& stream, Event& e)
 {
-  stream << "x: " << e.x << " "
-         << "y: " << e.y << " "
-         << "z: " << e.z << " "
-         << "time: " << e.time;
+  stream << "x: " << fixed << setprecision(4) << setw(8) << e.x << " "
+         << "y: " << setw(8) << e.y << " "
+         << "z: " << setw(8) << e.z << " "
+         << "time: " << setprecision(1) << setw(8) << e.time;
 
   return stream;
+}
+
+
+YAML::Emitter& operator<< (YAML::Emitter& out, const Event& v)
+{
+  //yaml-cpp does not support fixed floating-point formatting,
+  //osrtingstream is only used for formatting. 
+  //TODO: replace with faster formatting procedure. -ak
+
+  ostringstream s;
+  s.precision(4);
+  s.setf(ios_base::fixed, ios_base::floatfield);
+
+  out << YAML::Flow << YAML::BeginSeq;
+  s << v.x;
+  out << s.str();
+  s.str("");
+  s << v.y;
+  out << s.str();
+  s.str("");
+  s << v.z;
+  out << s.str();
+  s.str("");
+  s << setprecision(1) << v.time;
+  out << s.str();
+  out << YAML::EndSeq;
+
+  return out;
 }
 
 
@@ -29,15 +60,15 @@ double TraceData::getTotalTime()
 }
 
 
-Event TraceData::getEvent(int i)
+Event& TraceData::getEvent(int i)
 {
-  return events[i];
+  return events.at(i);
 }
 
 
 size_t TraceData::size()
 {
-  return events.size();
+  return events.size(); 
 }
 
 
@@ -45,69 +76,100 @@ void TraceData::loadYamlFile(char* traceFile)
 {
   YAML::Node doc = YAML::LoadFile(traceFile);
 
+  events.clear();
+
   //load metadata
-  //TODO: check for data
+  //TODO: implement data validation
   patientID = doc["patient-id"].as<int>();
+  date = doc["date"].as<std::string>();
+  location = doc["location"].as<std::string>();
+  patternType = doc["pattern"]["type"].as<std::string>();
+  patternLevel = doc["pattern"]["level"].as<int>();
+  workspace = doc["workspace"].as<std::string>();
+  coordinateSpace = doc["coordinate-space"].as<std::string>();
   totalTime = doc["total-time"].as<double>();
-  
-  //TODO:load additional nodes
 
   //load events
-  Event event;
   const YAML::Node& eventsNode = doc["events"];
 
-  for(size_t i=1; i < eventsNode.size(); i++)
-  {
-    const YAML::Node& node = eventsNode[i];
+  for(size_t i = 1; i < eventsNode.size(); i++)
+    events.push_back(eventsNode[i].as<Event>());
+}
 
-    event.x = node[0].as<double>();
-    event.y = node[1].as<double>();
-    event.z = node[2].as<double>();
-    event.time = node[3].as<double>();
- 
-    events.push_back(event);
-  }
+
+void TraceData::exportYamlFile(char* traceFile)
+{
+  YAML::Emitter out;
+
+  out << YAML::BeginDoc
+      << YAML::BeginMap
+      << YAML::Key << "patient-id" << YAML::Value << patientID
+      << YAML::Key << "date" << YAML::Value << date
+      << YAML::Key << "location" << YAML::Value << location
+      << YAML::Key << "pattern"
+      << YAML::BeginMap
+        << YAML::Key << "type" << YAML::Value << patternType
+        << YAML::Key << "level" << YAML::Value << patternLevel
+      << YAML::EndMap
+      << YAML::Key << "workspace" << YAML::Value << workspace
+      << YAML::Key << "coordinate-space" << YAML::Value << coordinateSpace
+      << YAML::Key << "total-time" << YAML::Value << totalTime
+      << YAML::Key << "events"
+      << YAML::Value << YAML::BeginSeq
+      << YAML::Flow
+      << YAML::BeginSeq << "x" << "y" << "z" << "time" << YAML::EndSeq;
+
+  for(auto& event : events)
+    out << event;
+
+  out << YAML::EndSeq
+      << YAML::EndMap;
+
+
+  ofstream file(traceFile);
+  file << "%YAML 1.2\n" << out.c_str();
+  file.close();
 }
 
 
 void TraceData::normalizeEvents()
 {
-  Event eMax, eMin, eScale;
-  vector<Event>::iterator eit;
+  Event eventMax, eventMin, eventScale;
+  vector<Event>::iterator eventVecItr;
 
-  eMax = eMin = events.front();
-  eMax.time = events.back().time;
+  eventMax = eventMin = events.front();
+  eventMax.time = events.back().time;
 
   //find min and max for each event spacial dimention
-  for(eit = events.begin(); eit != events.end(); eit++)
+  for(eventVecItr = events.begin(); eventVecItr != events.end(); eventVecItr++)
   {
-    if(eit->x > eMax.x)
-      eMax.x = eit->x;
-    else if(eit->x < eMin.x) 
-      eMin.x = eit->x;
+    if(eventVecItr->x > eventMax.x)
+      eventMax.x = eventVecItr->x;
+    else if(eventVecItr->x < eventMin.x) 
+      eventMin.x = eventVecItr->x;
 
-    if(eit->y > eMax.y)
-      eMax.y = eit->y;
-    else if(eit->y < eMin.y) 
-      eMin.y = eit->y;
+    if(eventVecItr->y > eventMax.y)
+      eventMax.y = eventVecItr->y;
+    else if(eventVecItr->y < eventMin.y) 
+      eventMin.y = eventVecItr->y;
 
-    if(eit->z > eMax.z)
-      eMax.z = eit->z;
-    else if(eit->z < eMin.z) 
-      eMin.z = eit->z;
+    if(eventVecItr->z > eventMax.z)
+      eventMax.z = eventVecItr->z;
+    else if(eventVecItr->z < eventMin.z) 
+      eventMin.z = eventVecItr->z;
   }
 
-  eScale.x = 1 / (eMax.x - eMin.x);
-  eScale.y = 1 / (eMax.y - eMin.y);
-  eScale.z = 1 / (eMax.z - eMin.z);
-  eScale.time = (2*PI) / eMax.time;
+  eventScale.x = 1 / (eventMax.x - eventMin.x);
+  eventScale.y = 1 / (eventMax.y - eventMin.y);
+  eventScale.z = 1 / (eventMax.z - eventMin.z);
+  eventScale.time = (2*PI) / eventMax.time;
 
-  for(eit = events.begin(); eit != events.end(); eit++)
+  for(eventVecItr = events.begin(); eventVecItr != events.end(); eventVecItr++)
   {
-    eit->x = (eit->x - eMin.x) * eScale.x;
-    eit->y = (eit->y - eMin.y) * eScale.y;
-    eit->z = (eit->z - eMin.z) * eScale.z;
-    eit->time = eit->time * eScale.time;
+    eventVecItr->x = (eventVecItr->x - eventMin.x) * eventScale.x;
+    eventVecItr->y = (eventVecItr->y - eventMin.y) * eventScale.y;
+    eventVecItr->z = (eventVecItr->z - eventMin.z) * eventScale.z;
+    eventVecItr->time = eventVecItr->time * eventScale.time;
   }
 }
 
