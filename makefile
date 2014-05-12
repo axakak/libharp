@@ -13,6 +13,14 @@ $(OBJDIR)/traceDataTester.o: $(addprefix src/, traceDataTester.cpp traceData.h)
 $(OBJDIR)/traceData.o: $(addprefix src/, traceData.cpp traceData.h)
 	g++ -c src/traceData.cpp -o tmp/traceData.o $(FLAGS)
 
+$(OBJS): | $(OBJDIR) $(BINDIR)
+
+$(OBJDIR):
+	mkdir $(OBJDIR)
+
+$(BINDIR):
+	mkdir $(BINDIR)
+
 clean:
 	rm -f $(BINDIR)/* $(OBJDIR)/*
 
