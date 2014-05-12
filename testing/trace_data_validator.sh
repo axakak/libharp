@@ -1,7 +1,8 @@
 #!/bin/bash
 
-TQC="../bin/tqc"
-TRACEDATA="traceDataFake.txt"
+TDT="../bin/traceDataTester"
+INPUTTRACEDATA="traceDataFake.txt"
 
-$TQC $TRACEDATA
+$TDT $INPUTTRACEDATA
 
+#TODO: add validation for export file
