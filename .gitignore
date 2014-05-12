@@ -1,3 +1,6 @@
+#################
+# tqc
+#################
 # Compiled Object files
 *.slo
 *.lo
@@ -12,4 +15,15 @@
 *.la
 *.a
 
+# Directories
+bin/*
+tmp/*
+
+# Testing results
 testing/exportTrace.txt
+
+#############
+# Mac detritus
+#############
+
+.DS_Store
