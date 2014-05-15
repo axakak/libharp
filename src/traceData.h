@@ -27,36 +27,193 @@ public:
   TraceData();
 
   void loadYamlFile(char* traceFile);
-  void exportYamlFile(char* traceFile);
+  void exportYamlFile(char* traceFile) const;
 
+  // access methods
+  string getPaitentID() const;
+  string getDate() const; //TODO: select standared date format
+  string getLocation() const;
+  string getPatternType() const;
+  int getPatternLevel() const;
+  string getWorkspace() const;
+  string getCoordinateSpace() const;
+  double getTotalTime() const;
 
-  //mutator functions
-  int  getPaitentID();
-  void setPaitentID(int pID);
-
-  double getTotalTime();
+  // modifier methods
+  void setPaitentID(string pID);
+  void setDate(string);
+  void setLocation(string);
+  void setPatternType(string);
+  void setPatternLevel(int);
+  void setWorkspace(string);
+  void setCoordinateSpace(string);
   void setTotalTime(double time);
 
-  Event& getEvent(int i);
+  void clear();
 
-  size_t size();
+  // std::vector methods
+  Event& at(size_t pos);
+  const Event& at(size_t pos) const;
+  Event& operator[](size_t pos);
+  void push_back(const Event&);
+  void pop_back();
+  bool empty() const;
+  size_t size() const;
 
   void normalizeEvents();
 
 private:
-  int patientID;
+  string patientID;
   string date;
   string location;
   string patternType;
   int patternLevel;
   string workspace;
   string coordinateSpace;
-
   double totalTime;
   vector<Event> events;
 };
 
+// inline Methods
+
+inline string TraceData::getPaitentID() const
+{
+  return patientID;
+}
+
+
+inline string TraceData::getDate() const
+{
+  return date;
+}
+
+inline string TraceData::getLocation() const
+{
+  return location;
+}
+
+
+inline string TraceData::getPatternType() const
+{
+  return patternType;
+}
+
+
+inline int TraceData::getPatternLevel() const
+{
+  return patternLevel;
+}
+
+
+inline string TraceData::getWorkspace() const
+{
+  return workspace;
+}
+
+
+inline string TraceData::getCoordinateSpace() const
+{
+  return coordinateSpace;
+}
+
+
+inline double TraceData::getTotalTime() const
+{
+  return totalTime;
+}
+
+
+inline void TraceData::setPaitentID(string str)
+{
+  patientID = str;
+}
+
+inline void TraceData::setDate(string str)
+{
+  date = str;
+}
+
+
+inline void TraceData::setLocation(string str)
+{
+  location = str;
+}
+
+
+inline void TraceData::setPatternType(string str)
+{
+  patternType = str;
+}
+
+
+inline void TraceData::setPatternLevel(int pLevel)
+{
+  patternLevel = pLevel;
+}
+
+
+inline void TraceData::setWorkspace(string str)
+{
+  workspace = str;
+}
+
+
+inline void TraceData::setCoordinateSpace(string str)
+{
+  coordinateSpace = str;
+}
+
+
+inline void TraceData::setTotalTime(double time)
+{
+ totalTime = time;
+}
+
+
+inline Event& TraceData::at(size_t pos)
+{
+  return events.at(pos);
+}
+
+
+inline const Event& TraceData::at(size_t pos) const
+{
+  return events.at(pos);
+}
+
+
+inline Event& TraceData::operator[](size_t pos)
+{
+  return events[pos];
+}
+
+
+inline void TraceData::push_back(const Event& value)
+{
+  events.push_back(value);
+}
+
+
+inline void TraceData::pop_back()
+{
+  events.pop_back();
+}
+
+
+inline bool TraceData::empty() const
+{
+  return events.empty();
+}
+
+
+inline size_t TraceData::size() const
+{
+  return events.size();
+}
+
+
 ostream& operator<< (ostream& stream, Event& e);
+
 
 YAML::Emitter& operator << (YAML::Emitter& out, const Event& v);
 
