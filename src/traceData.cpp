@@ -4,71 +4,9 @@
 #include <sstream>
 #include <iomanip>
 
-ostream& operator<< (ostream& stream, Event& e)
+
+TraceData::TraceData(): totalTime(0)
 {
-  stream << "x: " << fixed << setprecision(4) << setw(8) << e.x << " "
-         << "y: " << setw(8) << e.y << " "
-         << "z: " << setw(8) << e.z << " "
-         << "time: " << setprecision(1) << setw(8) << e.time;
-
-  return stream;
-}
-
-
-YAML::Emitter& operator<< (YAML::Emitter& out, const Event& v)
-{
-  //yaml-cpp does not support fixed floating-point formatting,
-  //osrtingstream is only used for formatting. 
-  //TODO: replace with faster formatting procedure. -ak
-
-  ostringstream s;
-  s.precision(4);
-  s.setf(ios_base::fixed, ios_base::floatfield);
-
-  out << YAML::Flow << YAML::BeginSeq;
-  s << v.x;
-  out << s.str();
-  s.str("");
-  s << v.y;
-  out << s.str();
-  s.str("");
-  s << v.z;
-  out << s.str();
-  s.str("");
-  s << setprecision(1) << v.time;
-  out << s.str();
-  out << YAML::EndSeq;
-
-  return out;
-}
-
-
-TraceData::TraceData(): patientID(0), totalTime(0)
-{
-}
-
-
-int TraceData::getPaitentID()
-{
-  return patientID;
-}
-
-
-double TraceData::getTotalTime()
-{
-  return totalTime;
-}
-
-
-Event& TraceData::getEvent(int i)
-{
-  return events.at(i);
-}
-
-
-size_t TraceData::size()
-{
-  return events.size(); 
 }
 
 
@@ -80,7 +18,7 @@ void TraceData::loadYamlFile(char* traceFile)
 
   //load metadata
   //TODO: implement data validation
-  patientID = doc["patient-id"].as<int>();
+  patientID = doc["patient-id"].as<std::string>();
   date = doc["date"].as<std::string>();
   location = doc["location"].as<std::string>();
   patternType = doc["pattern"]["type"].as<std::string>();
@@ -97,7 +35,7 @@ void TraceData::loadYamlFile(char* traceFile)
 }
 
 
-void TraceData::exportYamlFile(char* traceFile)
+void TraceData::exportYamlFile(char* traceFile) const
 {
   YAML::Emitter out;
 
@@ -172,4 +110,44 @@ void TraceData::normalizeEvents()
     eventVecItr->time = eventVecItr->time * eventScale.time;
   }
 }
+
+
+ostream& operator<< (ostream& stream, Event& e)
+{
+  stream << "x: " << fixed << setprecision(4) << setw(8) << e.x << " "
+         << "y: " << setw(8) << e.y << " "
+         << "z: " << setw(8) << e.z << " "
+         << "time: " << setprecision(1) << setw(8) << e.time;
+
+  return stream;
+}
+
+
+YAML::Emitter& operator<< (YAML::Emitter& out, const Event& v)
+{
+  //yaml-cpp does not support fixed floating-point formatting,
+  //osrtingstream is only used for formatting. 
+  //TODO: replace with faster formatting procedure. -ak
+
+  ostringstream s;
+  s.precision(4);
+  s.setf(ios_base::fixed, ios_base::floatfield);
+
+  out << YAML::Flow << YAML::BeginSeq;
+  s << v.x;
+  out << s.str();
+  s.str("");
+  s << v.y;
+  out << s.str();
+  s.str("");
+  s << v.z;
+  out << s.str();
+  s.str("");
+  s << setprecision(1) << v.time;
+  out << s.str();
+  out << YAML::EndSeq;
+
+  return out;
+}
+
 
