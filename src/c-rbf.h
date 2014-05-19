@@ -8,11 +8,16 @@
 
 using namespace std;
 
+class vector;
+
 struct Complex
 {
   double amplitude, phase;
 };
 
+/************************************************************
+ * Spatio-temporal Objects
+ ***********************************************************/
 
 class SpatioTemporalNeuron
 {
@@ -20,8 +25,8 @@ public:
   SpatioTemporalNeuron();
   //TODO: init with weights
 
-  double computeGainAmplitude(Event *event);
-  double computeGainPhase(Event *event);
+  void computeGain(const Event& event);
+  Complex getGain() const;
 
 private:
   Event weight;
@@ -32,18 +37,24 @@ private:
 class SpatioTemporalLayer
 {
 public:
-  void evaluateEvent(Event& event);
+  void evaluateLayer(const Event& event);
+
+  SpatioTemporalNeuron& operator[](size_t pos);
 
 private:
-  SpatioTemporalNeuron *neurons;
-  int size;
+  vector<SpatioTemporalNeuron> neurons;
 };
 
+
+/************************************************************
+ * Class Objects
+ ***********************************************************/
 
 class ClassNeuron
 {
 public:
-  int findBestMatchingUnit(SpatioTemporalNeuron *stLayer);
+  void computeGain(const SpatioTemporalLayer& stl);
+  Complex getGain() const;
 
 private:
   double omega(double x, double w);
@@ -58,24 +69,33 @@ private:
 class ClassLayer
 {
 public:
+  void evaluateLayer(const SpatioTemporalLayer& stl, vector<double>cErrors);
+
+  ClassNeuron& operator[](size_t pos);
 
 private:
   vector<ClassNeuron> neurons;
 };
 
 
+/************************************************************
+ *  Network Objects
+ ***********************************************************/
+
 class CRBFNeuralNetwork
 {
 public:
   CRBFNeuralNetwork();
-
   CRBFNeuralNetwork(CRBFNeuralNetwork orig);
   
-  ~CRBFNeuralNetwork();
-
   void evaluateTrace();
 
+  //TODO: write training function
+  void train();
+
 private:
+  double computeErrorIncrement(const Complex& gain);
+
   /* Input */
   TraceData trace;
 
@@ -86,5 +106,33 @@ private:
   /* Output */
   vector<double> cumulativeErrors;
 };
+
+
+/************************************************************
+ *  Inline Methods
+ ***********************************************************/
+
+inline Complex SpatioTemporalNeuron::getGain() const
+{
+  return gain;
+}
+
+
+inline SpatioTemporalNeuron& SpatioTemporalLayer::operator[](size_t pos)
+{
+  return neurons[pos];
+}
+
+
+inline Complex ClassNeuron::getGain() const
+{
+  return gain;
+}
+
+
+inline ClassNeuron& ClassLayer::operator[](size_t pos)
+{
+  return neurons[pos];
+}
 
 #endif //C_RBF_H
