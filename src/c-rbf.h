@@ -37,7 +37,8 @@ private:
 class SpatioTemporalLayer
 {
 public:
-  void evaluateLayer(const Event& event);
+  void evaluate(const Event& event);
+  void train();
 
   SpatioTemporalNeuron& operator[](size_t pos);
 
@@ -69,7 +70,7 @@ private:
 class ClassLayer
 {
 public:
-  void evaluateLayer(const SpatioTemporalLayer& stl, vector<double>cErrors);
+  void evaluate(const SpatioTemporalLayer& stl, vector<double>cErrors);
 
   ClassNeuron& operator[](size_t pos);
 

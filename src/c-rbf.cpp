@@ -23,7 +23,7 @@ void SpatioTemporalNeuron::computeGain(const Event& event)
 
 
 // calculate the gain of each neuron for a given event.
-void SpatioTemporalLayer::evaluateLayer(const Event& event)
+void SpatioTemporalLayer::evaluate(const Event& event)
 {
   int begin = 0,
       end = neurons.size();
@@ -46,6 +46,11 @@ void SpatioTemporalLayer::evaluateEventThreaded(const Event& event)
     thread.join();
 }*/
 
+void SpatioTemporalLayer::train()
+{
+  //randomly init complex valued weights with |w| <= 1.
+
+}
 
 /************************************************************
  * Class Objects
@@ -88,7 +93,7 @@ double ClassNeuron::omega(double x, double w)
 }
 
 
-void ClassLayer::evaluateLayer(const SpatioTemporalLayer& stl)
+void ClassLayer::evaluate(const SpatioTemporalLayer& stl)
 {
   // compute the gain for each class neuron
   for(auto& neuron : neurons)
@@ -115,16 +120,17 @@ void CRBFNeuralNetwork::evaluateTrace()
   for(int i = 0; i < trace.size(); i++)
   {
     //evaluate spatio-temporal layer for given event
-    stLayer.evaluateLayer(trace[i]);
+    stLayer.evaluate(trace[i]);
 
     //evalute class layer
-    cLayer.evaluateLayer(stLayer);
+    cLayer.evaluate(stLayer);
 
     //for each class add error to cumulativeErrors
     for(int k = 0; k < cumulativeErrors.size(); k++)
       cumulativeErrors[k] =+ computeErrorIncrement(cLayer[k].getGain());
   }
 }
+
 
 double CRBFNeuralNetwork::computeErrorIncrement(const Complex& gain)
 {
@@ -134,3 +140,12 @@ double CRBFNeuralNetwork::computeErrorIncrement(const Complex& gain)
   return (1/(trace.size()*hypot(Ys,Yt)) * hypot(Ys*gain.amplitude, Yt*gain.phase/PI); 
 }
 
+
+void CRBFNeuralNetwork::train()
+{
+  //prep traces for training
+
+  //train Spatio Temporal Layer
+  stLayer.train();
+
+}
