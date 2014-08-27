@@ -16,6 +16,9 @@ using namespace std;
 
 struct Event
 {
+  Event(): x(0), y(0), z(0), time(0){}
+  Event(double X, double Y, double Z, double Time): x(X), y(Y), z(Z), time(Time){}
+
   double x,y,z,time;
 };
 
@@ -55,6 +58,7 @@ public:
   Event& at(size_t pos);
   const Event& at(size_t pos) const;
   Event& operator[](size_t pos);
+  const Event& operator[](size_t pos) const;
   void push_back(const Event&);
   void pop_back();
   bool empty() const;
@@ -183,6 +187,12 @@ inline const Event& TraceData::at(size_t pos) const
 
 
 inline Event& TraceData::operator[](size_t pos)
+{
+  return events[pos];
+}
+
+
+inline const Event& TraceData::operator[](size_t pos) const
 {
   return events[pos];
 }

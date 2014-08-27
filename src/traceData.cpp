@@ -57,7 +57,7 @@ void TraceData::exportYamlFile(char* traceFile) const
       << YAML::Flow
       << YAML::BeginSeq << "x" << "y" << "z" << "time" << YAML::EndSeq;
 
-  for(auto& event : events)
+  for(auto &event : events)
     out << event;
 
   out << YAML::EndSeq
