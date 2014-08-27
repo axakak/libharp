@@ -32,6 +32,8 @@ void TraceData::loadYamlFile(char* traceFile)
 
   for(size_t i = 1; i < eventsNode.size(); i++)
     events.push_back(eventsNode[i].as<Event>());
+
+  findMinMaxBounds();
 }
 
 
@@ -70,44 +72,47 @@ void TraceData::exportYamlFile(char* traceFile) const
 }
 
 
+void TraceData::findMinMaxBounds()
+{
+  maxBound = minBound = events.front();
+  maxBound.time = events.back().time;
+
+  //find min and max for each event spacial dimension
+  for(auto &event : events)
+  {
+    if(event.x > maxBound.x)
+      maxBound.x = event.x;
+    else if(event.x < minBound.x) 
+      minBound.x = event.x;
+
+    if(event.y > maxBound.y)
+      maxBound.y = event.y;
+    else if(event.y < minBound.y) 
+      minBound.y = event.y;
+
+    if(event.z > maxBound.z)
+      maxBound.z = event.z;
+    else if(event.z < minBound.z) 
+      minBound.z = event.z;
+  }
+}
+
+
 void TraceData::normalizeEvents()
 {
-  Event eventMax, eventMin, eventScale;
-  vector<Event>::iterator eventVecItr;
+  Event eventScale;
 
-  eventMax = eventMin = events.front();
-  eventMax.time = events.back().time;
+  eventScale.x = 1 / (maxBound.x - minBound.x);
+  eventScale.y = 1 / (maxBound.y - minBound.y);
+  eventScale.z = 1 / (maxBound.z - minBound.z);
+  eventScale.time = (2*PI) / maxBound.time;
 
-  //find min and max for each event spacial dimention
-  for(eventVecItr = events.begin(); eventVecItr != events.end(); eventVecItr++)
+  for(auto &event : events)
   {
-    if(eventVecItr->x > eventMax.x)
-      eventMax.x = eventVecItr->x;
-    else if(eventVecItr->x < eventMin.x) 
-      eventMin.x = eventVecItr->x;
-
-    if(eventVecItr->y > eventMax.y)
-      eventMax.y = eventVecItr->y;
-    else if(eventVecItr->y < eventMin.y) 
-      eventMin.y = eventVecItr->y;
-
-    if(eventVecItr->z > eventMax.z)
-      eventMax.z = eventVecItr->z;
-    else if(eventVecItr->z < eventMin.z) 
-      eventMin.z = eventVecItr->z;
-  }
-
-  eventScale.x = 1 / (eventMax.x - eventMin.x);
-  eventScale.y = 1 / (eventMax.y - eventMin.y);
-  eventScale.z = 1 / (eventMax.z - eventMin.z);
-  eventScale.time = (2*PI) / eventMax.time;
-
-  for(eventVecItr = events.begin(); eventVecItr != events.end(); eventVecItr++)
-  {
-    eventVecItr->x = (eventVecItr->x - eventMin.x) * eventScale.x;
-    eventVecItr->y = (eventVecItr->y - eventMin.y) * eventScale.y;
-    eventVecItr->z = (eventVecItr->z - eventMin.z) * eventScale.z;
-    eventVecItr->time = eventVecItr->time * eventScale.time;
+    event.x = (event.x - minBound.x) * eventScale.x;
+    event.y = (event.y - minBound.y) * eventScale.y;
+    event.z = (event.z - minBound.z) * eventScale.z;
+    event.time = (event.time - minBound.time) * eventScale.time;
   }
 }
 
