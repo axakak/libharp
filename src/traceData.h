@@ -41,6 +41,8 @@ public:
   string getWorkspace() const;
   string getCoordinateSpace() const;
   double getTotalTime() const;
+  Event getMaxBound() const;
+  Event getMinBound() const;
 
   // modifier methods
   void setPaitentID(string pID);
@@ -67,6 +69,8 @@ public:
   void normalizeEvents();
 
 private:
+  void findMinMaxBounds();
+
   string patientID;
   string date;
   string location;
@@ -75,7 +79,10 @@ private:
   string workspace;
   string coordinateSpace;
   double totalTime;
+
   vector<Event> events;
+  Event maxBound;
+  Event minBound;
 };
 
 // inline Methods
@@ -124,6 +131,18 @@ inline string TraceData::getCoordinateSpace() const
 inline double TraceData::getTotalTime() const
 {
   return totalTime;
+}
+
+
+inline Event TraceData::getMaxBound() const
+{
+  return maxBound;
+}
+
+
+inline Event TraceData::getMinBound() const
+{
+  return minBound;
 }
 
 
