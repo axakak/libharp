@@ -10,7 +10,7 @@ TraceData::TraceData(): totalTime(0)
 }
 
 
-void TraceData::loadYamlFile(char* traceFile)
+void TraceData::loadYamlFile(const string& traceFile)
 {
   YAML::Node doc = YAML::LoadFile(traceFile);
 
@@ -37,7 +37,7 @@ void TraceData::loadYamlFile(char* traceFile)
 }
 
 
-void TraceData::exportYamlFile(char* traceFile) const
+void TraceData::exportYamlFile(const string& traceFile) const
 {
   YAML::Emitter out;
 
