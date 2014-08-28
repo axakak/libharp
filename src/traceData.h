@@ -5,6 +5,7 @@
 //Standard libs
 #include <vector>
 #include <fstream>
+#include <string>
 
 //3rd party libs
 #include <yaml-cpp/yaml.h>
@@ -29,8 +30,8 @@ public:
   //default constructor
   TraceData();
 
-  void loadYamlFile(char* traceFile);
-  void exportYamlFile(char* traceFile) const;
+  void loadYamlFile(const string& traceFile);
+  void exportYamlFile(const string& traceFile) const;
 
   // access methods
   string getPaitentID() const;
