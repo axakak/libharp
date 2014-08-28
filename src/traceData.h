@@ -10,7 +10,7 @@
 //3rd party libs
 #include <yaml-cpp/yaml.h>
 
-#define PI 3.1415926535897932
+constexpr double g_pi = 3.14159265358979323846;
 
 using namespace std;
 

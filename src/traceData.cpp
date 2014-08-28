@@ -105,7 +105,7 @@ void TraceData::normalizeEvents()
   eventScale.x = 1 / (maxBound.x - minBound.x);
   eventScale.y = 1 / (maxBound.y - minBound.y);
   eventScale.z = 1 / (maxBound.z - minBound.z);
-  eventScale.time = (2*PI) / maxBound.time;
+  eventScale.time = (2*g_pi) / maxBound.time;
 
   for(auto &event : events)
   {
