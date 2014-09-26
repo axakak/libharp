@@ -88,7 +88,7 @@ void SpatioTemporalLayer::randomizeNeurons()
   // assign initial values to the weights with |w| <= 1 & 〈w <= 2pi
   std::random_device rd;// if too slow use as seed to pseudo-random generator
   std::uniform_real_distribution<> sDist(0,1);// range not inclusive [0,1)
-  std::uniform_real_distribution<> tDist(0,2*PI);// range not inclusive [0,2pi)
+  std::uniform_real_distribution<> tDist(0,2*g_pi);// range not inclusive [0,2pi)
 
   neurons.clear();
 
@@ -104,7 +104,7 @@ void SpatioTemporalLayer::estimateDistances(const Event& inputData)
   evaluate(inputData);
 
   for(auto &neuron : neurons)
-    neuron.setGain(hypot(neuron.getGain().amplitude, neuron.getGain().phase/PI));
+    neuron.setGain(hypot(neuron.getGain().amplitude, neuron.getGain().phase/g_pi));
 
   // sort neurons in increasing distance from input data
   std::sort(neurons.begin(), neurons.end(),
@@ -153,7 +153,7 @@ void ClassNeuron::computeGain(const SpatioTemporalLayer& stl)
   for(int k = 0; k < weights.size(); k++)
   {
     re = omega(stl[k].getGain().amplitude, weights[k].amplitude);
-    im = omega(stl[k].getGain().phase, weights[k].phase/PI);
+    im = omega(stl[k].getGain().phase, weights[k].phase/g_pi);
     magnitude = hypot(re,im);
 
     if(magnitude < minMagnitude)
@@ -165,7 +165,7 @@ void ClassNeuron::computeGain(const SpatioTemporalLayer& stl)
     }
   }
 
-  gain.phase = copysign(PI*gain.phase, stl[kBMU].getGain().phase);
+  gain.phase = copysign(g_pi*gain.phase, stl[kBMU].getGain().phase);
 }
 
 
@@ -221,7 +221,7 @@ double CRBFNeuralNetwork::computeErrorIncrement(const Complex& gain)
   double Ys = 1, // spacial priority
          Yt = 1; // temporal priority
 
-  return (1/(trace.size()*hypot(Ys,Yt))) * hypot(Ys*gain.amplitude, Yt*gain.phase/PI); 
+  return (1/(trace.size()*hypot(Ys,Yt))) * hypot(Ys*gain.amplitude, Yt*gain.phase/g_pi); 
 }
 
 
