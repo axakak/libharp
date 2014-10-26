@@ -23,13 +23,13 @@ class SpatioTemporalNeuron
 {
 public:
   SpatioTemporalNeuron(double X, double Y, double Z, double Time)
-      :weight(X, Y, Z, Time){};
+      :weight(X, Y, Z, Time){}
 
   void computeGain(const Event& event);
   void setGain(const double amp, const double ph=0);
   void setWeight(const Event& event);
-  Complex getGain() const;
-  Event& getWeight();
+  const Complex getGain() const;
+  const Event& getWeight() const;
 
 private:
   Event weight;
@@ -40,8 +40,10 @@ private:
 class SpatioTemporalLayer
 {
 public:
+  string exportYamlString() const;
+
   void evaluate(const Event& event);
-  void train(const TraceData& td);
+  void train(const vector<TraceData>& tdv);
   void randomizeNeurons();
   void estimateDistances(const Event& inputData);
   void adaptWeights(const Event& inputData, int time);
@@ -96,18 +98,25 @@ private:
 class CRBFNeuralNetwork
 {
 public:
-  CRBFNeuralNetwork();
+  CRBFNeuralNetwork(): trace(){}
+
   CRBFNeuralNetwork(const CRBFNeuralNetwork& orig);
   
   void evaluateTrace();
 
-  void train();//TODO: complete training function
+  //TODO: complete training function
+  void train(const string& traceFileList);
+  void exportYamlFile(const string& traceFile) const;
+  void exportCsvFile(const string& mTracesFile) const;
+  void loadTraceFileList(const string& traceFileList);
 
 private:
   double computeErrorIncrement(const Complex& gain);
 
   /* Input */
   TraceData trace;
+
+  vector<TraceData> mTraces; 
 
   /* Neural Network Layers */
   SpatioTemporalLayer stLayer;
@@ -122,7 +131,7 @@ private:
  *  Inline Methods
  ***********************************************************/
 
-inline Complex SpatioTemporalNeuron::getGain() const
+inline const Complex SpatioTemporalNeuron::getGain() const
 {
   return gain;
 }
@@ -139,15 +148,18 @@ inline const SpatioTemporalNeuron& SpatioTemporalLayer::operator[](size_t pos) c
   return neurons[pos];
 }
 
+
 inline double SpatioTemporalLayer::epsilon(const double time) const
 {
   return 1/(time + 1);
 }
 
+
 inline double SpatioTemporalLayer::lambda(const double time) const
 {
   return 1/(time + 1);
 }
+
 
 inline Complex ClassNeuron::getGain() const
 {
@@ -158,6 +170,32 @@ inline Complex ClassNeuron::getGain() const
 inline ClassNeuron& ClassLayer::operator[](size_t pos)
 {
   return neurons[pos];
+}
+
+
+/************************************************************
+ * YAML parser/emitter
+ ***********************************************************/
+YAML::Emitter& operator<< (YAML::Emitter& out, const SpatioTemporalNeuron& v);
+
+namespace YAML
+{
+  template<>
+  struct convert<SpatioTemporalNeuron>
+  {
+    static Node encode(const SpatioTemporalNeuron& rhs)
+    {
+      Node node;
+      node.push_back(rhs.getWeight());
+      return node;
+    }
+
+    static bool decode(const Node& node, SpatioTemporalNeuron& rhs)
+    {
+      rhs.setWeight(node.as<Event>());
+      return true;
+    }
+  };
 }
 
 #endif //C_RBF_H

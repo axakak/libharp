@@ -4,6 +4,9 @@
 #include <thread>
 #include <random>
 #include <algorithm>
+#include <fstream>
+#include <iostream> 
+#include <chrono>
 
 /************************************************************
  * Spatio-temporal Objects
@@ -37,9 +40,37 @@ void SpatioTemporalNeuron::setWeight(const Event& event)
 }
 
 
-Event& SpatioTemporalNeuron::getWeight()
+const Event& SpatioTemporalNeuron::getWeight() const
 {
   return weight;
+}
+
+
+YAML::Emitter& operator<< (YAML::Emitter& out, const SpatioTemporalNeuron& v)
+{
+  out << v.getWeight();
+
+  return out;
+}
+
+
+string SpatioTemporalLayer::exportYamlString() const
+{
+  YAML::Emitter out;
+
+  out << YAML::BeginMap
+      << YAML::Key << "spatio-temporal-neurons"
+      << YAML::Value << YAML::BeginSeq
+      << YAML::Flow
+      << YAML::BeginSeq << "x" << "y" << "z" << "time" << YAML::EndSeq;
+
+  for(auto &neuron : neurons)
+    out << neuron;
+
+  out << YAML::EndSeq
+      << YAML::EndMap;
+
+  return out.c_str();
 }
 
 
@@ -64,13 +95,21 @@ void SpatioTemporalLayer::evaluateEventThreaded(const Event& event)
     thread.join();
 }*/
 
-void SpatioTemporalLayer::train(const TraceData& td)
+void SpatioTemporalLayer::train(const vector<TraceData>& tdv)
 {
+  cout << "\x1B[36m==>\x1B[0m "
+       << "Training spatio-temporal layer using neural-gas algorithm" << endl; 
+  
+  chrono::time_point<chrono::system_clock> start, end;
+  start = chrono::system_clock::now();
+
   randomizeNeurons();
 
+  //*
   for(int time = 0; time < 100; time++)
   {
     //For each input vector (i.e. training data)
+    for(auto &td : tdv)
     for(int dataIndex = 0; dataIndex < td.size(); dataIndex++)
     {
       // estimate distances and sort in increasing order
@@ -79,12 +118,19 @@ void SpatioTemporalLayer::train(const TraceData& td)
       // perform adaptation step for neural weights, using neural-gas algorithm
       adaptWeights(td[dataIndex], time);
     }
-  }
+  }//*/
+  
+  end = chrono::system_clock::now();
+  chrono::duration<double> elapsed_seconds = end-start;
+  cout << "Spatio-temporal training completed, "
+       << elapsed_seconds.count() << "s" << endl; 
 }
 
 
 void SpatioTemporalLayer::randomizeNeurons()
 {
+  cout << "Randomizing spatio-temporal neurons" << endl; 
+
   // assign initial values to the weights with |w| <= 1 & 〈w <= 2pi
   std::random_device rd;// if too slow use as seed to pseudo-random generator
   std::uniform_real_distribution<> sDist(0,1);// range not inclusive [0,1)
@@ -92,7 +138,7 @@ void SpatioTemporalLayer::randomizeNeurons()
 
   neurons.clear();
 
-  //TODO:LATER: change to dynamic neuron count
+  //TODO:LATER: use dynamic neuron count (thesis)
   for(int i = 0; i < 200; i++)
     neurons.emplace_back(sDist(rd),sDist(rd),sDist(rd),tDist(rd));
 }
@@ -225,14 +271,70 @@ double CRBFNeuralNetwork::computeErrorIncrement(const Complex& gain)
 }
 
 
-void CRBFNeuralNetwork::train()
+void CRBFNeuralNetwork::train(const string& traceFileList)
 {
-  //TODO: load all traces into trace for training
+  cout << "\x1B[35m==>\x1B[0m " << "Training neural network" << endl; 
 
-  //train Spatio Temporal Layer
-  stLayer.train(trace);
+  // load all traces into trace for network training
+  loadTraceFileList(traceFileList);
 
-  //XXX: CURRENT
-  //train Class Layer
+  // normalize trace data
+  for(auto &mTrace : mTraces)
+    mTrace.normalizeEvents();
+  
+  exportCsvFile("mtrace.csv");
+  
+  // train Spatio Temporal Layer
+  stLayer.train(mTraces);
+
+  //TODO:train Class Layer
   //cLayer.train();
+}
+
+
+void CRBFNeuralNetwork::exportYamlFile(const string& nnFile) const
+{
+  cout << "Exporting neural network to " << nnFile << endl;
+
+  ofstream file(nnFile);
+
+  file << "%YAML 1.2\n---\n"
+       << stLayer.exportYamlString();// export spatio temporal neurons
+  
+  //TODO: export class neurons
+
+  file.close();  
+}
+
+
+void CRBFNeuralNetwork::exportCsvFile(const string& mTracesFile) const
+{
+  ofstream csvfile(mTracesFile);
+
+  csvfile << "x,y,z,time" << endl;
+  
+  for(auto &mTrace : mTraces)
+    csvfile << mTrace.exportCsvString();
+
+  csvfile.close();
+}
+
+
+void CRBFNeuralNetwork::loadTraceFileList(const string& traceFileList)
+{
+  cout << "\x1B[36m==>\x1B[0m "
+       <<  "Loading traces from " << traceFileList << endl; 
+
+  ifstream fileList(traceFileList);
+  string traceFile;
+
+  // for each file in list
+  while(getline(fileList, traceFile))
+  {
+    cout << "Loading trace " << traceFile << endl; 
+
+    mTraces.emplace_back(traceFile);
+  }
+
+  fileList.close();
 }
