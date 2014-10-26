@@ -9,14 +9,20 @@ TraceData::TraceData(): totalTime(0)
 {
 }
 
+TraceData::TraceData(const string& traceFile)
+{
+  loadYamlFile(traceFile);
+}
 
 void TraceData::loadYamlFile(const string& traceFile)
 {
   YAML::Node doc = YAML::LoadFile(traceFile);
 
+  fileName = traceFile;
+
   events.clear();
 
-  //load metadata
+  //load metadata 
   //TODO: implement data validation
   patientID = doc["patient-id"].as<std::string>();
   date = doc["date"].as<std::string>();
@@ -29,6 +35,7 @@ void TraceData::loadYamlFile(const string& traceFile)
 
   //load events
   const YAML::Node& eventsNode = doc["events"];
+  //TODO: the old format labeled "events" as "data"
 
   for(size_t i = 1; i < eventsNode.size(); i++)
     events.push_back(eventsNode[i].as<Event>());
@@ -69,6 +76,42 @@ void TraceData::exportYamlFile(const string& traceFile) const
   ofstream file(traceFile);
   file << "%YAML 1.2\n" << out.c_str();
   file.close();
+}
+
+
+void TraceData::exportCsvFile(const string& traceFile) const
+{
+  ofstream file(traceFile);
+
+  file.precision(4);
+  file.setf(ios_base::fixed, ios_base::floatfield);
+
+  file << "x,y,z,time" << endl;
+  
+  for(auto &event : events)
+  {
+    file << event.x << "," << event.y << "," 
+         << event.z << "," << event.time << endl;
+  }
+
+  file.close();
+}
+
+
+string TraceData::exportCsvString() const
+{
+  stringstream csvStringStream;
+
+  csvStringStream.precision(4);
+  csvStringStream.setf(ios_base::fixed, ios_base::floatfield);
+  
+  for(auto &event : events)
+  {
+    csvStringStream << event.x << "," << event.y << ","
+                 << event.z << "," << event.time << endl;
+  }
+
+  return csvStringStream.str();
 }
 
 
@@ -122,7 +165,7 @@ ostream& operator<< (ostream& stream, Event& e)
   stream << "x: " << fixed << setprecision(4) << setw(8) << e.x << " "
          << "y: " << setw(8) << e.y << " "
          << "z: " << setw(8) << e.z << " "
-         << "time: " << setprecision(1) << setw(8) << e.time;
+         << "time: " << setw(8) << e.time;
 
   return stream;
 }
@@ -148,7 +191,7 @@ YAML::Emitter& operator<< (YAML::Emitter& out, const Event& v)
   s << v.z;
   out << s.str();
   s.str("");
-  s << setprecision(1) << v.time;
+  s << v.time;
   out << s.str();
   out << YAML::EndSeq;
 

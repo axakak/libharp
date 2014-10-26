@@ -29,9 +29,12 @@ class TraceData
 public:
   //default constructor
   TraceData();
+  TraceData(const string& traceFile);
 
   void loadYamlFile(const string& traceFile);
   void exportYamlFile(const string& traceFile) const;
+  void exportCsvFile(const string& traceFile) const;
+  string exportCsvString() const;
 
   // access methods
   string getPaitentID() const;
@@ -72,6 +75,8 @@ public:
 private:
   void findMinMaxBounds();
 
+  string fileName;
+
   string patientID;
   string date;
   string location;
@@ -86,7 +91,9 @@ private:
   Event minBound;
 };
 
-// inline Methods
+/************************************************************
+ *  Inline Methods
+ ***********************************************************/
 
 inline string TraceData::getPaitentID() const
 {
@@ -98,6 +105,7 @@ inline string TraceData::getDate() const
 {
   return date;
 }
+
 
 inline string TraceData::getLocation() const
 {
@@ -152,6 +160,7 @@ inline void TraceData::setPaitentID(string str)
   patientID = str;
 }
 
+
 inline void TraceData::setDate(string str)
 {
   date = str;
@@ -190,7 +199,7 @@ inline void TraceData::setCoordinateSpace(string str)
 
 inline void TraceData::setTotalTime(double time)
 {
- totalTime = time;
+  totalTime = time;
 }
 
 
@@ -245,7 +254,11 @@ inline size_t TraceData::size() const
 ostream& operator<< (ostream& stream, Event& e);
 
 
-YAML::Emitter& operator << (YAML::Emitter& out, const Event& v);
+/************************************************************
+ * YAML parser/emitter
+ ***********************************************************/
+
+YAML::Emitter& operator<< (YAML::Emitter& out, const Event& v);
 
 
 namespace YAML
@@ -276,6 +289,5 @@ namespace YAML
     }
   };
 }
-
 
 #endif //TRACE_DATA_H
