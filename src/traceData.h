@@ -33,6 +33,7 @@ public:
 
   void loadYamlFile(const string& traceFile);
   void exportYamlFile(const string& traceFile) const;
+  string exportYamlString() const;
   void exportCsvFile(const string& traceFile) const;
   string exportCsvString() const;
 

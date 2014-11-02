@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream> 
+#include <iomanip>
 #include <chrono>
 
 /************************************************************
@@ -54,11 +55,12 @@ YAML::Emitter& operator<< (YAML::Emitter& out, const SpatioTemporalNeuron& v)
 }
 
 
-string SpatioTemporalLayer::exportYamlString() const
+string SpatioTemporalLayer::exportNeuronsYamlString() const
 {
   YAML::Emitter out;
 
-  out << YAML::BeginMap
+  out << YAML::BeginDoc
+      << YAML::BeginMap
       << YAML::Key << "spatio-temporal-neurons"
       << YAML::Value << YAML::BeginSeq
       << YAML::Flow
@@ -71,6 +73,18 @@ string SpatioTemporalLayer::exportYamlString() const
       << YAML::EndMap;
 
   return out.c_str();
+}
+
+
+void SpatioTemporalLayer::exportNeuronsYamlFile(const string& fileName) const
+{
+  cout << "Exporting spatio-temporal neurons to " << fileName << endl;
+
+  ofstream file(fileName);
+
+  file << "%YAML 1.2\n" << exportNeuronsYamlString();
+
+  file.close(); 
 }
 
 
@@ -100,30 +114,43 @@ void SpatioTemporalLayer::train(const vector<TraceData>& tdv)
   cout << "\x1B[36m==>\x1B[0m "
        << "Training spatio-temporal layer using neural-gas algorithm" << endl; 
   
+  ofstream file("spatioTemporalTrain.yaml");
+  file << "%YAML 1.2";
+
   chrono::time_point<chrono::system_clock> start, end;
   start = chrono::system_clock::now();
 
   randomizeNeurons();
 
-  //*
-  for(int time = 0; time < 100; time++)
+  cout << "Adapting spatio-temporal neurons" << endl;
+  for(int time = 0; time < 50; time++)
   {
+    cout << "\x1B[1K\x1b[10D" << setw(3) << time+1 << "%";
+    cout.flush();
+
+    file << endl << exportNeuronsYamlString();
+    
     //For each input vector (i.e. training data)
     for(auto &td : tdv)
-    for(int dataIndex = 0; dataIndex < td.size(); dataIndex++)
+    //for(int dataIndex = 0; dataIndex < td.size(); dataIndex++)
+    for(int dataIndex = td.size()-1; dataIndex >= 0 ; dataIndex--)
     {
-      // estimate distances and sort in increasing order
+      // estimate distances and sort neruons in increasing distance from event
       estimateDistances(td[dataIndex]);
 
       // perform adaptation step for neural weights, using neural-gas algorithm
       adaptWeights(td[dataIndex], time);
     }
-  }//*/
+  }
   
   end = chrono::system_clock::now();
   chrono::duration<double> elapsed_seconds = end-start;
-  cout << "Spatio-temporal training completed, "
-       << elapsed_seconds.count() << "s" << endl; 
+
+  file << endl << exportNeuronsYamlString();
+  file.close(); 
+
+  cout << "\nSpatio-temporal training completed in "
+       << elapsed_seconds.count() << "s" << endl;
 }
 
 
@@ -138,7 +165,7 @@ void SpatioTemporalLayer::randomizeNeurons()
 
   neurons.clear();
 
-  //TODO:LATER: use dynamic neuron count (thesis)
+  //TODO:LATER: use dynamic neuron count (thesis topic)
   for(int i = 0; i < 200; i++)
     neurons.emplace_back(sDist(rd),sDist(rd),sDist(rd),tDist(rd));
 }
@@ -282,7 +309,8 @@ void CRBFNeuralNetwork::train(const string& traceFileList)
   for(auto &mTrace : mTraces)
     mTrace.normalizeEvents();
   
-  exportCsvFile("mtrace.csv");
+  // export normalized trace data
+  exportMTraceYamlFile("normalizedTrainingData.yaml");
   
   // train Spatio Temporal Layer
   stLayer.train(mTraces);
@@ -299,11 +327,25 @@ void CRBFNeuralNetwork::exportYamlFile(const string& nnFile) const
   ofstream file(nnFile);
 
   file << "%YAML 1.2\n---\n"
-       << stLayer.exportYamlString();// export spatio temporal neurons
+       << stLayer.exportNeuronsYamlString();// export spatio temporal neurons
   
   //TODO: export class neurons
 
-  file.close();  
+  file.close();
+}
+
+
+void CRBFNeuralNetwork::exportMTraceYamlFile(const string& fileName) const
+{
+  cout << "Exporting training trace data to " << fileName << endl;
+
+  ofstream file(fileName);
+  file << "%YAML 1.2";
+
+  for(auto &mTrace : mTraces)
+    file << endl << mTrace.exportYamlString();
+
+  file.close();
 }
 
 
@@ -332,9 +374,10 @@ void CRBFNeuralNetwork::loadTraceFileList(const string& traceFileList)
   while(getline(fileList, traceFile))
   {
     cout << "Loading trace " << traceFile << endl; 
-
     mTraces.emplace_back(traceFile);
   }
+
+  //TODO: check all trace data is from the same pattern
 
   fileList.close();
 }

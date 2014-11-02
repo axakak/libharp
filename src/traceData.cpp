@@ -21,7 +21,7 @@ void TraceData::loadYamlFile(const string& traceFile)
   fileName = traceFile;
 
   events.clear();
-
+  
   //load metadata 
   //TODO: implement data validation
   patientID = doc["patient-id"].as<std::string>();
@@ -35,7 +35,7 @@ void TraceData::loadYamlFile(const string& traceFile)
 
   //load events
   const YAML::Node& eventsNode = doc["events"];
-  //TODO: the old format labeled "events" as "data"
+  //BUG: some old files label "events" as "data" and will not load
 
   for(size_t i = 1; i < eventsNode.size(); i++)
     events.push_back(eventsNode[i].as<Event>());
@@ -45,6 +45,14 @@ void TraceData::loadYamlFile(const string& traceFile)
 
 
 void TraceData::exportYamlFile(const string& traceFile) const
+{
+  ofstream file(traceFile);
+  file << "%YAML 1.2\n" << exportYamlString();
+  file.close();
+}
+
+
+string TraceData::exportYamlString() const
 {
   YAML::Emitter out;
 
@@ -72,10 +80,7 @@ void TraceData::exportYamlFile(const string& traceFile) const
   out << YAML::EndSeq
       << YAML::EndMap;
 
-
-  ofstream file(traceFile);
-  file << "%YAML 1.2\n" << out.c_str();
-  file.close();
+  return out.c_str();
 }
 
 

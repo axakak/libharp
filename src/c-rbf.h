@@ -40,7 +40,8 @@ private:
 class SpatioTemporalLayer
 {
 public:
-  string exportYamlString() const;
+  string exportNeuronsYamlString() const;
+  void exportNeuronsYamlFile(const string& fileName) const;
 
   void evaluate(const Event& event);
   void train(const vector<TraceData>& tdv);
@@ -109,6 +110,7 @@ public:
   void exportYamlFile(const string& traceFile) const;
   void exportCsvFile(const string& mTracesFile) const;
   void loadTraceFileList(const string& traceFileList);
+  void exportMTraceYamlFile(const string& mTracesFile) const;
 
 private:
   double computeErrorIncrement(const Complex& gain);
@@ -116,7 +118,7 @@ private:
   /* Input */
   TraceData trace;
 
-  vector<TraceData> mTraces; 
+  vector<TraceData> mTraces;
 
   /* Neural Network Layers */
   SpatioTemporalLayer stLayer;
