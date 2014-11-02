@@ -1,4 +1,3 @@
-
 FLAGS = -std=c++11 -stdlib=libc++ -Wall -g -Wno-c++11-extensions
 BINDIR = bin
 OBJDIR = tmp
