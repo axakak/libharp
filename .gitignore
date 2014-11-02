@@ -27,3 +27,8 @@ testing/exportTrace.txt
 #############
 
 .DS_Store
+
+#################
+# vim
+#################
+*.swo
