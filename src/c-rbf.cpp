@@ -326,7 +326,7 @@ void CRBFNeuralNetwork::exportYamlFile(const string& nnFile) const
 
   ofstream file(nnFile);
 
-  file << "%YAML 1.2\n---\n"
+  file << "%YAML 1.2" << endl
        << stLayer.exportNeuronsYamlString();// export spatio temporal neurons
   
   //TODO: export class neurons
