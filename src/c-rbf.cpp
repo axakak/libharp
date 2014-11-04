@@ -23,8 +23,14 @@ void SpatioTemporalNeuron::computeGain(const Event& event)
 
   gain.amplitude = sqrt( ((qx*qx)+(qy*qy)+(qz*qz)) / 3);
 
-  //TODO: J. Zahradnik paper shows output range < -pi;pi >, double-check
+  //TODO: J. Zahradnik paper shows output range <-pi;pi>, double-check
   gain.phase =  event.time - weight.time;
+ 
+  // constrain to <-pi;pi>
+  if(gain.phase > g_pi)
+    gain.phase -= 2*g_pi;
+  else if(gain.phase < -g_pi) 
+    gain.phase += 2*g_pi;
 }
 
 
@@ -123,17 +129,16 @@ void SpatioTemporalLayer::train(const vector<TraceData>& tdv)
   randomizeNeurons();
 
   cout << "Adapting spatio-temporal neurons" << endl;
-  for(int time = 0; time < 50; time++)
+  for(int time = 0, maxTime = 50; time < maxTime; time++)
   {
-    cout << "\x1B[1K\x1b[10D" << setw(3) << time+1 << "%";
+    cout << "\x1B[1K\x1b[10D" << setw(3) << (time+1/maxTime)*100 << "%";
     cout.flush();
 
     file << endl << exportNeuronsYamlString();
     
     //For each input vector (i.e. training data)
     for(auto &td : tdv)
-    //for(int dataIndex = 0; dataIndex < td.size(); dataIndex++)
-    for(int dataIndex = td.size()-1; dataIndex >= 0 ; dataIndex--)
+    for(int dataIndex = 0; dataIndex < td.size(); dataIndex++)
     {
       // estimate distances and sort neruons in increasing distance from event
       estimateDistances(td[dataIndex]);
@@ -166,7 +171,7 @@ void SpatioTemporalLayer::randomizeNeurons()
   neurons.clear();
 
   //TODO:LATER: use dynamic neuron count (thesis topic)
-  for(int i = 0; i < 200; i++)
+  for(int i = 0; i < 100; i++)
     neurons.emplace_back(sDist(rd),sDist(rd),sDist(rd),tDist(rd));
 }
 
