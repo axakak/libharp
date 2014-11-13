@@ -23,7 +23,6 @@ void SpatioTemporalNeuron::computeGain(const Event& event)
 
   gain.amplitude = sqrt( ((qx*qx)+(qy*qy)+(qz*qz)) / 3);
 
-  //TODO: J. Zahradnik paper shows output range <-pi;pi>, double-check
   gain.phase =  event.time - weight.time;
  
   // constrain to <-pi;pi>
@@ -88,7 +87,7 @@ void SpatioTemporalLayer::exportNeuronsYamlFile(const string& fileName) const
 
   ofstream file(fileName);
 
-  file << "%YAML 1.2\n" << exportNeuronsYamlString();
+  file << "%YAML 1.2" << endl << exportNeuronsYamlString();
 
   file.close(); 
 }
@@ -129,22 +128,24 @@ void SpatioTemporalLayer::train(const vector<TraceData>& tdv)
   randomizeNeurons();
 
   cout << "Adapting spatio-temporal neurons" << endl;
-  for(int time = 0, maxTime = 50; time < maxTime; time++)
+  for(int time = 0, maxTime = 5; time < maxTime; time++)
   {
-    cout << "\x1B[1K\x1b[10D" << setw(3) << (time+1/maxTime)*100 << "%";
+    cout << "\x1B[1K\x1b[10D" << setw(3) << (time+1.0)/maxTime*100 << "%";
     cout.flush();
 
-    file << endl << exportNeuronsYamlString();
     
     //For each input vector (i.e. training data)
     for(auto &td : tdv)
-    for(int dataIndex = 0; dataIndex < td.size(); dataIndex++)
     {
-      // estimate distances and sort neruons in increasing distance from event
-      estimateDistances(td[dataIndex]);
+      file << endl << exportNeuronsYamlString();
+      for(int dataIndex = 0; dataIndex < td.size(); dataIndex++)
+      {
+        // estimate distances and sort neruons in increasing distance from event
+        estimateDistances(td[dataIndex]);
 
-      // perform adaptation step for neural weights, using neural-gas algorithm
-      adaptWeights(td[dataIndex], time);
+        // perform adaptation step for neural weights, using neural-gas algorithm
+        adaptWeights(td[dataIndex], time);
+      }
     }
   }
   
@@ -171,7 +172,7 @@ void SpatioTemporalLayer::randomizeNeurons()
   neurons.clear();
 
   //TODO:LATER: use dynamic neuron count (thesis topic)
-  for(int i = 0; i < 100; i++)
+  for(int i = 0; i < 250; i++)
     neurons.emplace_back(sDist(rd),sDist(rd),sDist(rd),tDist(rd));
 }
 

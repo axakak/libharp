@@ -153,13 +153,13 @@ inline const SpatioTemporalNeuron& SpatioTemporalLayer::operator[](size_t pos) c
 
 inline double SpatioTemporalLayer::epsilon(const double time) const
 {
-  return 1/(time + 1);
+  return 1.0f/(time + 1.0f);
 }
 
 
 inline double SpatioTemporalLayer::lambda(const double time) const
 {
-  return 1/(time + 1);
+  return 1.0f/(time + 1.0f);
 }
 
 
