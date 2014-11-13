@@ -1,5 +1,4 @@
 #!/usr/bin/env python3.4
-
 import os
 import sys
 import subprocess as sub
@@ -12,8 +11,8 @@ from mpl_toolkits.mplot3d import axis3d
 
 rootDir = os.path.dirname(os.getcwd())
 
-crbfTrain = os.path.join(rootDir,'bin/crbfTester')
-traceDataList = 'stc_1_list_short.txt'
+crbfTrain = os.path.join(rootDir,'bin/crbfTrainer')
+traceDataList = 'stc_1_list.txt'
 
 # check that build is up to date
 os.chdir(rootDir)
@@ -25,7 +24,7 @@ if sub.call(["make","-q"]):
 os.chdir(os.path.join(rootDir, 'test/stc_1_sample'))
 crbfTrainCMD = "'{}' {}".format(crbfTrain, traceDataList)
 print(crbfTrainCMD)
-#sub.call(crbfTrainCMD,shell=True,stdout=sys.stdout)
+sub.call(crbfTrainCMD,shell=True,stdout=sys.stdout)
 
 
 # display results
@@ -64,7 +63,7 @@ ax2.set_zlim3d(0, 2*np.pi)
 #load training trace date yaml file
 for yamlDoc in yaml.load_all(open('normalizedTrainingData.yaml', 'r')):
     ntd = np.array((yamlDoc['events'][1:]))
-    ax2.scatter(ntd[::200,0],ntd[::200,1],ntd[::200,3], c='g', edgecolor='c', marker='.', depthshade=False)
+    ax2.scatter(ntd[::150,0],ntd[::150,1],ntd[::150,3], c='g', edgecolor='c', marker='.', depthshade=False)
 
 '''
 #load 
