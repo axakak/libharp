@@ -1,9 +1,8 @@
 %YAML 1.2
 ---
-patient-id: 
+patient-id: ""
 date: Mon Nov 03 13:25:30 2014
-
-location: 
+location: ""
 pattern: 
   type: straight to Curvy
   level: 1
