@@ -28,6 +28,8 @@ public:
   void computeGain(const Event& event);
   void setGain(const double amp, const double ph=0);
   void setWeight(const Event& event);
+  void addWeight(const Event& event);
+  void accumulateOffset(const Event& data, double factor);
   const Complex getGain() const;
   const Event& getWeight() const;
 
@@ -44,10 +46,8 @@ public:
   void exportNeuronsYamlFile(const string& fileName) const;
 
   void evaluate(const Event& event);
-  void train(const vector<TraceData>& tdv);
+  void train(TraceData& td);
   void randomizeNeurons();
-  void estimateDistances(const Event& inputData);
-  void adaptWeights(const Event& inputData, int time);
 
   double epsilon(const double time) const;
   double lambda(const double time) const;

@@ -26,10 +26,12 @@ void SpatioTemporalNeuron::computeGain(const Event& event)
   gain.phase =  event.time - weight.time;
  
   // constrain to <-pi;pi>
+  /*
   if(gain.phase > g_pi)
     gain.phase -= 2*g_pi;
   else if(gain.phase < -g_pi) 
     gain.phase += 2*g_pi;
+  */
 }
 
 
@@ -43,6 +45,18 @@ void SpatioTemporalNeuron::setGain(const double amp, const double ph)
 void SpatioTemporalNeuron::setWeight(const Event& event)
 {
   weight = event;
+}
+
+
+void SpatioTemporalNeuron::addWeight(const Event& event)
+{
+  weight += event;
+}
+
+
+void SpatioTemporalNeuron::accumulateOffset(const Event& data, double factor)
+{
+    weight += ((data - weight) * factor);
 }
 
 
@@ -114,7 +128,8 @@ void SpatioTemporalLayer::evaluateEventThreaded(const Event& event)
     thread.join();
 }*/
 
-void SpatioTemporalLayer::train(const vector<TraceData>& tdv)
+
+void SpatioTemporalLayer::train(TraceData& td)
 {
   cout << "\x1B[36m==>\x1B[0m "
        << "Training spatio-temporal layer using neural-gas algorithm" << endl; 
@@ -127,26 +142,42 @@ void SpatioTemporalLayer::train(const vector<TraceData>& tdv)
 
   randomizeNeurons();
 
-  cout << "Adapting spatio-temporal neurons" << endl;
-  for(int time = 0, maxTime = 5; time < maxTime; time++)
+  cout << "Adapting spatio-temporal neurons" << endl
+       << "  0.0%";
+
+  for(int time = 0, maxTime = 20; time < maxTime; time++)
   {
-    cout << "\x1B[1K\x1b[10D" << setw(3) << (time+1.0)/maxTime*100 << "%";
-    cout.flush();
-
+    double eps = epsilon(time);
+    double lam = lambda(time);
     
-    //For each input vector (i.e. training data)
-    for(auto &td : tdv)
-    {
-      file << endl << exportNeuronsYamlString();
-      for(int dataIndex = 0; dataIndex < td.size(); dataIndex++)
-      {
-        // estimate distances and sort neruons in increasing distance from event
-        estimateDistances(td[dataIndex]);
+    file << endl << exportNeuronsYamlString();
+    
+    // randomly shuffle trace data
+    td.shuffleEvents();
 
-        // perform adaptation step for neural weights, using neural-gas algorithm
-        adaptWeights(td[dataIndex], time);
-      }
+    for(int dataIndex = 0; dataIndex < td.size(); dataIndex++)
+    {
+      // estimate distance between input data and all neurons
+      evaluate(td[dataIndex]);
+
+      //convert distance to magnitude
+      for(auto &neuron : neurons)
+        neuron.setGain(hypot(neuron.getGain().amplitude, neuron.getGain().phase/g_pi));
+
+      // sort neurons in increasing distance from input data
+      // TODO: consider using partial_sort
+      std::sort(neurons.begin(), neurons.end(),
+        [](SpatioTemporalNeuron lhs, SpatioTemporalNeuron rhs)
+        {return lhs.getGain().amplitude < rhs.getGain().amplitude;});
+
+      // calculate adaptation step for the weights
+      for(int k = 0; k < neurons.size(); k++)
+        neurons[k].accumulateOffset(td[dataIndex], eps*exp(-k/lam));
     }
+
+    cout << "\x1B[1K\x1b[10D" << setw(3) << (time/maxTime)*100.0f << "%";
+    cout.flush();
+    
   }
   
   end = chrono::system_clock::now();
@@ -165,7 +196,7 @@ void SpatioTemporalLayer::randomizeNeurons()
   cout << "Randomizing spatio-temporal neurons" << endl; 
 
   // assign initial values to the weights with |w| <= 1 & 〈w <= 2pi
-  std::random_device rd;// if too slow use as seed to pseudo-random generator
+  std::random_device rd;// if too slow, use as seed to pseudo-random generator
   std::uniform_real_distribution<> sDist(0,1);// range not inclusive [0,1)
   std::uniform_real_distribution<> tDist(0,2*g_pi);// range not inclusive [0,2pi)
 
@@ -176,43 +207,6 @@ void SpatioTemporalLayer::randomizeNeurons()
     neurons.emplace_back(sDist(rd),sDist(rd),sDist(rd),tDist(rd));
 }
 
-
-void SpatioTemporalLayer::estimateDistances(const Event& inputData)
-{
-  // estimate distance between input data and all neurons
-  evaluate(inputData);
-
-  for(auto &neuron : neurons)
-    neuron.setGain(hypot(neuron.getGain().amplitude, neuron.getGain().phase/g_pi));
-
-  // sort neurons in increasing distance from input data
-  std::sort(neurons.begin(), neurons.end(),
-    [](SpatioTemporalNeuron lhs, SpatioTemporalNeuron rhs)
-    {return lhs.getGain().amplitude < rhs.getGain().amplitude;});
-}
-
-
-void SpatioTemporalLayer::adaptWeights(const Event& inputData, int time)
-{
-  double eps = epsilon(time);
-  double lam = lambda(time);
-  double factor;
-  Event weight;
-
-  // perform adaptation step for the weights
-  for(int neuronIndex = 0; neuronIndex < neurons.size(); neuronIndex++)
-  {
-    factor = eps*exp(-neuronIndex/lam);
-    weight = neurons[neuronIndex].getWeight();
-
-    weight.x = weight.x + (factor * (inputData.x - weight.x));
-    weight.y = weight.y + (factor * (inputData.y - weight.y));
-    weight.z = weight.z + (factor * (inputData.z - weight.z));
-    weight.time = weight.time + (factor * (inputData.time - weight.time));
-
-    neurons[neuronIndex].setWeight(weight);
-  }
-}
 
 
 /************************************************************
@@ -317,9 +311,13 @@ void CRBFNeuralNetwork::train(const string& traceFileList)
   
   // export normalized trace data
   exportMTraceYamlFile("normalizedTrainingData.yaml");
-  
+
+  // consolidate traces
+  for(auto &mTrace : mTraces)
+    trace.insertEvents(mTrace);
+
   // train Spatio Temporal Layer
-  stLayer.train(mTraces);
+  stLayer.train(trace);
 
   //TODO:train Class Layer
   //cLayer.train();

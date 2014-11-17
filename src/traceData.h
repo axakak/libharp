@@ -20,6 +20,26 @@ struct Event
   Event(): x(0), y(0), z(0), time(0){}
   Event(double X, double Y, double Z, double Time): x(X), y(Y), z(Z), time(Time){}
 
+  Event operator-(const Event& rhs) const
+  {
+    return Event(x-rhs.x, y-rhs.y, z-rhs.z, time-rhs.time);
+  }
+
+  Event operator*(const double rhs) const
+  {
+    return Event(x*rhs,y*rhs,z*rhs,time*rhs);
+  }
+
+  Event& operator+=(const Event& rhs)
+  { 
+    x = x + rhs.x;
+    y = y + rhs.y;
+    z = z + rhs.z;
+    time = time + rhs.time;
+
+    return *this;
+  }
+
   double x,y,z,time;
 };
 
@@ -31,6 +51,7 @@ public:
   TraceData();
   TraceData(const string& traceFile);
 
+  // I/O functions
   void loadYamlFile(const string& traceFile);
   void exportYamlFile(const string& traceFile) const;
   string exportYamlString() const;
@@ -72,6 +93,8 @@ public:
   size_t size() const;
 
   void normalizeEvents();
+  void shuffleEvents();
+  void insertEvents(TraceData& td);
 
 private:
   void findMinMaxBounds();

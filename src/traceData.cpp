@@ -3,7 +3,8 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
-
+#include <random>
+#include <algorithm>
 
 TraceData::TraceData(): totalTime(0)
 {
@@ -165,14 +166,17 @@ void TraceData::normalizeEvents()
 }
 
 
-ostream& operator<< (ostream& stream, Event& e)
+void TraceData::shuffleEvents()
 {
-  stream << "x: " << fixed << setprecision(4) << setw(8) << e.x << " "
-         << "y: " << setw(8) << e.y << " "
-         << "z: " << setw(8) << e.z << " "
-         << "time: " << setw(8) << e.time;
+  random_device rd;
+  mt19937 g(rd());
+  shuffle(events.begin(), events.end(), g);
+}
 
-  return stream;
+
+void TraceData::insertEvents(TraceData& td)
+{
+  events.insert(events.begin(), td.events.begin(), td.events.end());
 }
 
 
@@ -203,4 +207,14 @@ YAML::Emitter& operator<< (YAML::Emitter& out, const Event& v)
   return out;
 }
 
+
+ostream& operator<< (ostream& stream, Event& e)
+{
+  stream << "x: " << fixed << setprecision(4) << setw(8) << e.x << " "
+         << "y: " << setw(8) << e.y << " "
+         << "z: " << setw(8) << e.z << " "
+         << "time: " << setw(8) << e.time;
+
+  return stream;
+}
 
