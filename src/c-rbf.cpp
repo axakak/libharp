@@ -35,37 +35,6 @@ void SpatioTemporalNeuron::computeGain(const Event& event)
 }
 
 
-void SpatioTemporalNeuron::setGain(const double amp, const double ph)
-{
-  gain.amplitude = amp;
-  gain.phase = ph;
-}
-
-
-void SpatioTemporalNeuron::setWeight(const Event& event)
-{
-  weight = event;
-}
-
-
-void SpatioTemporalNeuron::addWeight(const Event& event)
-{
-  weight += event;
-}
-
-
-void SpatioTemporalNeuron::accumulateOffset(const Event& data, double factor)
-{
-    weight += ((data - weight) * factor);
-}
-
-
-const Event& SpatioTemporalNeuron::getWeight() const
-{
-  return weight;
-}
-
-
 YAML::Emitter& operator<< (YAML::Emitter& out, const SpatioTemporalNeuron& v)
 {
   out << v.getWeight();
@@ -126,7 +95,8 @@ void SpatioTemporalLayer::evaluateEventThreaded(const Event& event)
 
   for(auto& thread : threads)
     thread.join();
-}*/
+}
+*/
 
 
 void SpatioTemporalLayer::train(TraceData& td)
@@ -137,13 +107,12 @@ void SpatioTemporalLayer::train(TraceData& td)
   ofstream file("spatioTemporalTrain.yaml");
   file << "%YAML 1.2";
 
-  chrono::time_point<chrono::system_clock> start, end;
-  start = chrono::system_clock::now();
-
   randomizeNeurons();
 
-  cout << "Adapting spatio-temporal neurons" << endl
-       << "  0.0%";
+  cout << "Adapting spatio-temporal neurons" << endl;
+
+  chrono::time_point<chrono::system_clock> start, end;
+  start = chrono::system_clock::now();
 
   for(int time = 0, maxTime = 20; time < maxTime; time++)
   {
@@ -151,6 +120,9 @@ void SpatioTemporalLayer::train(TraceData& td)
     double lam = lambda(time);
     
     file << endl << exportNeuronsYamlString();
+    
+    cout << "\x1B[1K\x1B[10D" << setw(3) << (float(time)/maxTime)*100 << "%";
+    cout.flush();  
     
     // randomly shuffle trace data
     td.shuffleEvents();
@@ -164,8 +136,8 @@ void SpatioTemporalLayer::train(TraceData& td)
       for(auto &neuron : neurons)
         neuron.setGain(hypot(neuron.getGain().amplitude, neuron.getGain().phase/g_pi));
 
+      //TODO: Find/implement improved sorting method
       // sort neurons in increasing distance from input data
-      // TODO: consider using partial_sort
       std::sort(neurons.begin(), neurons.end(),
         [](SpatioTemporalNeuron lhs, SpatioTemporalNeuron rhs)
         {return lhs.getGain().amplitude < rhs.getGain().amplitude;});
@@ -174,10 +146,6 @@ void SpatioTemporalLayer::train(TraceData& td)
       for(int k = 0; k < neurons.size(); k++)
         neurons[k].accumulateOffset(td[dataIndex], eps*exp(-k/lam));
     }
-
-    cout << "\x1B[1K\x1b[10D" << setw(3) << (time/maxTime)*100.0f << "%";
-    cout.flush();
-    
   }
   
   end = chrono::system_clock::now();
@@ -186,7 +154,7 @@ void SpatioTemporalLayer::train(TraceData& td)
   file << endl << exportNeuronsYamlString();
   file.close(); 
 
-  cout << "\nSpatio-temporal training completed in "
+  cout << endl << "Spatio-temporal training completed in "
        << elapsed_seconds.count() << "s" << endl;
 }
 

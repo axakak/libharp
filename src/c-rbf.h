@@ -28,9 +28,8 @@ public:
   void computeGain(const Event& event);
   void setGain(const double amp, const double ph=0);
   void setWeight(const Event& event);
-  void addWeight(const Event& event);
   void accumulateOffset(const Event& data, double factor);
-  const Complex getGain() const;
+  const Complex& getGain() const;
   const Event& getWeight() const;
 
 private:
@@ -68,7 +67,7 @@ class ClassNeuron
 {
 public:
   void computeGain(const SpatioTemporalLayer& stl);
-  Complex getGain() const;
+  const Complex& getGain() const;
 
 private:
   double omega(double x, double w);
@@ -133,9 +132,34 @@ private:
  *  Inline Methods
  ***********************************************************/
 
-inline const Complex SpatioTemporalNeuron::getGain() const
+inline void SpatioTemporalNeuron::setGain(const double amp, const double ph)
+{
+  gain.amplitude = amp;
+  gain.phase = ph;
+}
+
+
+inline void SpatioTemporalNeuron::setWeight(const Event& event)
+{
+  weight = event;
+}
+
+
+inline void SpatioTemporalNeuron::accumulateOffset(const Event& data, double factor)
+{
+    weight += ((data - weight) * factor);
+}
+
+
+inline const Complex& SpatioTemporalNeuron::getGain() const
 {
   return gain;
+}
+
+
+inline const Event& SpatioTemporalNeuron::getWeight() const
+{
+  return weight;
 }
 
 
@@ -163,7 +187,7 @@ inline double SpatioTemporalLayer::lambda(const double time) const
 }
 
 
-inline Complex ClassNeuron::getGain() const
+inline const Complex& ClassNeuron::getGain() const
 {
   return gain;
 }
