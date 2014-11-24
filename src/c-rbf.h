@@ -41,12 +41,14 @@ private:
 class SpatioTemporalLayer
 {
 public:
+  SpatioTemporalLayer():maxTime(20){}
+
   string exportNeuronsYamlString() const;
   void exportNeuronsYamlFile(const string& fileName) const;
 
   void evaluate(const Event& event);
   void train(TraceData& td);
-  void randomizeNeurons();
+  void generateRandomNeurons(int count);
 
   double epsilon(const double time) const;
   double lambda(const double time) const;
@@ -56,6 +58,7 @@ public:
 
 private:
   vector<SpatioTemporalNeuron> neurons;
+  int maxTime;
 };
 
 
@@ -104,7 +107,6 @@ public:
   
   void evaluateTrace();
 
-  //TODO: complete training function
   void train(const string& traceFileList);
   void exportYamlFile(const string& traceFile) const;
   void exportCsvFile(const string& mTracesFile) const;

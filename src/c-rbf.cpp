@@ -107,20 +107,20 @@ void SpatioTemporalLayer::train(TraceData& td)
   ofstream file("spatioTemporalTrain.yaml");
   file << "%YAML 1.2";
 
-  randomizeNeurons();
+  generateRandomNeurons(150);
 
   cout << "Adapting spatio-temporal neurons" << endl;
 
   chrono::time_point<chrono::system_clock> start, end;
   start = chrono::system_clock::now();
 
-  for(int time = 0, maxTime = 20; time < maxTime; time++)
+  for(int time = 0; time < maxTime; time++)
   {
     double eps = epsilon(time);
     double lam = lambda(time);
-    
+
     file << endl << exportNeuronsYamlString();
-    
+
     cout << "\x1B[1K\x1B[10D" << setw(3) << (float(time)/maxTime)*100 << "%";
     cout.flush();  
     
@@ -159,9 +159,9 @@ void SpatioTemporalLayer::train(TraceData& td)
 }
 
 
-void SpatioTemporalLayer::randomizeNeurons()
+void SpatioTemporalLayer::generateRandomNeurons(int count)
 {
-  cout << "Randomizing spatio-temporal neurons" << endl; 
+  cout << "Generating random spatio-temporal neurons" << endl; 
 
   // assign initial values to the weights with |w| <= 1 & 〈w <= 2pi
   std::random_device rd;// if too slow, use as seed to pseudo-random generator
@@ -171,7 +171,7 @@ void SpatioTemporalLayer::randomizeNeurons()
   neurons.clear();
 
   //TODO:LATER: use dynamic neuron count (thesis topic)
-  for(int i = 0; i < 250; i++)
+  for(int i = 0; i < count; i++)
     neurons.emplace_back(sDist(rd),sDist(rd),sDist(rd),tDist(rd));
 }
 
@@ -309,7 +309,7 @@ void CRBFNeuralNetwork::exportYamlFile(const string& nnFile) const
 
 void CRBFNeuralNetwork::exportMTraceYamlFile(const string& fileName) const
 {
-  cout << "Exporting training trace data to " << fileName << endl;
+  cout << "Exporting trace data to " << fileName << endl;
 
   ofstream file(fileName);
   file << "%YAML 1.2";
@@ -341,14 +341,18 @@ void CRBFNeuralNetwork::loadTraceFileList(const string& traceFileList)
 
   ifstream fileList(traceFileList);
   string traceFile;
+  int eventCount = 0;
 
   // for each file in list
   while(getline(fileList, traceFile))
   {
-    cout << "Loading trace " << traceFile << endl; 
+    cout << "Loading trace " << traceFile << endl;
     mTraces.emplace_back(traceFile);
+    eventCount += mTraces.back().size(); 
   }
 
+  cout << "Loading complete... " << mTraces.size() << " traces containing "
+       << eventCount << " events" << endl;
   //TODO: check all trace data is from the same pattern
 
   fileList.close();
