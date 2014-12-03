@@ -25,6 +25,11 @@ struct Event
     return Event(x-rhs.x, y-rhs.y, z-rhs.z, time-rhs.time);
   }
 
+  Event operator+(const Event& rhs) const
+  {
+    return Event(x+rhs.x, y+rhs.y, z+rhs.z, time+rhs.time);
+  }
+
   Event operator*(const double rhs) const
   {
     return Event(x*rhs,y*rhs,z*rhs,time*rhs);
