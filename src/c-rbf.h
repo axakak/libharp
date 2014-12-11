@@ -33,6 +33,7 @@ public:
   void setWeight(const Event& event);
   void setGain(double amp, double ph=0);
   void setError(double err);
+  void setIndex(int i);
   const Event& getWeight() const;
   const Complex& getGain() const;
   double getError() const;
@@ -53,20 +54,23 @@ public:
   void neighbourWithLargestError(const SpatioTemporalNeuron* stNeuron);
   bool noEdges() const;
 
+  void exportConnectionsYaml(YAML::Emitter& e);
+
 private:
   Event weight;
   Complex gain;
   unordered_map<SpatioTemporalNeuron*, int> edges;
   double distance;
   double error;
+  int index;
 };
 
 
 class SpatioTemporalLayer
 {
 public:
-  string exportNeuronsYamlString() const;
-  void exportNeuronsYamlFile(const string& fileName) const;
+  string exportNeuronsYamlString();
+  void exportNeuronsYamlFile(const string& fileName);
 
   void evaluate(const Event& event);
   void train(TraceData& td);
@@ -128,7 +132,7 @@ public:
   void evaluateTrace();
 
   void train(const string& traceFileList);
-  void exportYamlFile(const string& traceFile) const;
+  void exportYamlFile(const string& traceFile);
   void exportCsvFile(const string& mTracesFile) const;
   void loadTraceFileList(const string& traceFileList);
   void exportMTraceYamlFile(const string& mTracesFile) const;
@@ -173,9 +177,15 @@ inline void SpatioTemporalNeuron::setError(double err)
 }
 
 
+inline void SpatioTemporalNeuron::setIndex(int i)
+{
+  index = i;
+}
+
+
 inline void SpatioTemporalNeuron::accumulateError()
 {
-  error += distance;
+  error += sqrt(distance);
 }
 
 

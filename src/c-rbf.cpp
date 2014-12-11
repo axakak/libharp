@@ -36,7 +36,7 @@ void SpatioTemporalNeuron::computeDistance(const Event& event)
   gain.amplitude = sqrt( ((q.x*q.x)+(q.y*q.y)+(q.z*q.z))/3 );
   gain.phase = q.time;
 
-  distance = hypot(gain.amplitude, gain.phase/g_pi);
+  distance = pow(gain.amplitude,2) + pow(gain.phase/g_pi,2);
 }
 
 
@@ -53,19 +53,22 @@ void SpatioTemporalNeuron::incramentEdgeAges()
 void SpatioTemporalNeuron::adapt(const Event& event)
 {
   //move self towards event
-  weight += (event - weight) * 0.2f;
+  weight += (event - weight) * 0.1f;
   
   //move neighbors towards event
   for(auto &edge : edges)
-    edge.first->weight += (event - edge.first->weight) * 0.006f;
+    edge.first->weight += (event - edge.first->weight) * 0.01f;
 }
 
 
 void SpatioTemporalNeuron::connect(SpatioTemporalNeuron* stNeuron)
 {
   //set age to zero, if edge does not exist it will be created
-  edges[stNeuron] = 0;
-  stNeuron->edges[this] = 0;
+  if(stNeuron != this)
+  {
+    edges[stNeuron] = 0;
+    stNeuron->edges[this] = 0;
+  }
 }
 
 
@@ -103,19 +106,41 @@ void SpatioTemporalNeuron::neighbourWithLargestError(const SpatioTemporalNeuron*
 }
 
 
-string SpatioTemporalLayer::exportNeuronsYamlString() const
+void SpatioTemporalNeuron::exportConnectionsYaml(YAML::Emitter& e)
+{
+  for(auto &edge : edges)
+    if(!(index > edge.first->index))
+      e  << YAML::Flow
+         << YAML::BeginSeq << index << edge.first->index << YAML::EndSeq;
+}
+
+
+string SpatioTemporalLayer::exportNeuronsYamlString()
 {
   YAML::Emitter out;
 
   out << YAML::BeginDoc
       << YAML::BeginMap
-      << YAML::Key << "spatio-temporal-neurons"
+      << YAML::Key << "spatio-temporal-neuron-weights"
       << YAML::Value << YAML::BeginSeq
       << YAML::Flow
       << YAML::BeginSeq << "x" << "y" << "z" << "time" << YAML::EndSeq;
 
+  int i = 0;
   for(auto &neuron : neurons)
-    out << neuron;
+  {
+    out << neuron.getWeight();
+    neuron.setIndex(i++);
+  }
+
+  out << YAML::EndSeq
+      << YAML::Key << "spatio-temporal-neuron-edges"
+      << YAML::Value << YAML::BeginSeq
+      << YAML::Flow
+      << YAML::BeginSeq << "v1" << "v2" << YAML::EndSeq;
+
+  for(auto &neuron : neurons)
+    neuron.exportConnectionsYaml(out);
 
   out << YAML::EndSeq
       << YAML::EndMap;
@@ -124,7 +149,7 @@ string SpatioTemporalLayer::exportNeuronsYamlString() const
 }
 
 
-void SpatioTemporalLayer::exportNeuronsYamlFile(const string& fileName) const
+void SpatioTemporalLayer::exportNeuronsYamlFile(const string& fileName)
 {
   cout << "Exporting spatio-temporal neurons to " << fileName << endl;
 
@@ -150,10 +175,8 @@ void SpatioTemporalLayer::train(TraceData& td)
   cout << "\x1B[36m==>\x1B[0m "
        << "Training spatio-temporal layer using growing neural-gas algorithm" << endl; 
   
-
-
-  int tdIndex,
-      time = 0;
+  unsigned int time = 0;
+  int tdIndex;
 
   ofstream file("spatioTemporalTrain.yaml");
   file << "%YAML 1.2";
@@ -170,6 +193,8 @@ void SpatioTemporalLayer::train(TraceData& td)
 
   //STEP 0: Generate 2 neurons at random positions
   generateRandomNeurons(2);
+
+ // file << endl << exportNeuronsYamlString();
 
   do
   {
@@ -221,12 +246,11 @@ void SpatioTemporalLayer::train(TraceData& td)
     }
 
     //step 8: If the number of input signals selected is a multiple of lam, insert new neuron
-    if(!(time%500))
+    if(!(time%60000))
     {
-      cout << "\x1B[1K\x1B[10D" << setw(3) << neurons.size() <<  " neurons";
-      cout.flush();  
+      cout << "\x1B[1K\x1B[40D" << "nc:" << neurons.size() <<  "  t:" << time;
       
-      if(!(time%1000))
+      if(!(time%350000))
         file << endl << exportNeuronsYamlString();
 
       //Determine the neuron q with max accumulated error
@@ -235,6 +259,9 @@ void SpatioTemporalLayer::train(TraceData& td)
         if(neuron.getError() > neuronS1->getError())
           neuronS1 = &neuron;
       }
+
+      cout << "  e:" << setprecision(4) << neuronS1->getError();
+      cout.flush();
 
       //find the neighbour f of q with the largest error
       neuronS1->neighbourWithLargestError(neuronS2);
@@ -262,7 +289,7 @@ void SpatioTemporalLayer::train(TraceData& td)
     for(auto &neuron : neurons)
       neuron.scaleError(0.995f);
 
-  }while(neurons.size() < 150);//TODO: select better stopping criterion
+  }while(time < 9999999);//TODO: select better stopping criterion
 
   end = chrono::system_clock::now();
   chrono::duration<double> elapsed_seconds = end-start;
@@ -406,7 +433,7 @@ void CRBFNeuralNetwork::train(const string& traceFileList)
 }
 
 
-void CRBFNeuralNetwork::exportYamlFile(const string& nnFile) const
+void CRBFNeuralNetwork::exportYamlFile(const string& nnFile)
 {
   cout << "Exporting neural network to " << nnFile << endl;
 
