@@ -1,10 +1,8 @@
 FLAGS = -std=c++11 -stdlib=libc++ -Wall -g -Wno-c++11-extensions
 BINDIR = bin
 OBJDIR = tmp
-#OBJS = $(addprefix $(OBJDIR)/, crbfTrainer.o traceDataTester.o traceData.o c-rbf.o)
 
 all: dir $(addprefix bin/, traceDataTester crbfTrainer)
-	@date
 
 $(BINDIR)/traceDataTester: $(addprefix $(OBJDIR)/, traceDataTester.o traceData.o)
 	g++ -o bin/traceDataTester $(addprefix $(OBJDIR)/, traceDataTester.o traceData.o) -lyaml-cpp
