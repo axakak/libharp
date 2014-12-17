@@ -114,7 +114,7 @@ string TraceData::exportCsvString() const
   for(auto &event : events)
   {
     csvStringStream << event.x << "," << event.y << ","
-                 << event.z << "," << event.time << endl;
+                    << event.z << "," << event.time << endl;
   }
 
   return csvStringStream.str();
@@ -151,6 +151,7 @@ void TraceData::normalizeEvents()
 {
   Event eventScale;
 
+  //TODO: find better way to normalize z, values are very scattered -ak
   eventScale.x = 1 / (maxBound.x - minBound.x);
   eventScale.y = 1 / (maxBound.y - minBound.y);
   eventScale.z = 1 / (maxBound.z - minBound.z);

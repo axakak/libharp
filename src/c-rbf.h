@@ -185,7 +185,7 @@ inline void SpatioTemporalNeuron::setIndex(int i)
 
 inline void SpatioTemporalNeuron::accumulateError()
 {
-  error += sqrt(distance);
+  error += distance;
 }
 
 

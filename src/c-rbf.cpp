@@ -33,7 +33,7 @@ void SpatioTemporalNeuron::computeDistance(const Event& event)
 {
   Event q = event - weight;
 
-  gain.amplitude = sqrt( ((q.x*q.x)+(q.y*q.y)+(q.z*q.z))/3 );
+  gain.amplitude = sqrt((q.x*q.x) + (q.y*q.y) + (q.z*q.z));
   gain.phase = q.time;
 
   distance = pow(gain.amplitude,2) + pow(gain.phase/g_pi,2);
@@ -57,7 +57,7 @@ void SpatioTemporalNeuron::adapt(const Event& event)
   
   //move neighbors towards event
   for(auto &edge : edges)
-    edge.first->weight += (event - edge.first->weight) * 0.01f;
+    edge.first->weight += (event - edge.first->weight) * 0.001f;
 }
 
 
@@ -177,6 +177,7 @@ void SpatioTemporalLayer::train(TraceData& td)
   
   unsigned int time = 0;
   int tdIndex;
+  SpatioTemporalNeuron *neuronS1, *neuronS2;
 
   ofstream file("spatioTemporalTrain.yaml");
   file << "%YAML 1.2";
@@ -194,17 +195,15 @@ void SpatioTemporalLayer::train(TraceData& td)
   //STEP 0: Generate 2 neurons at random positions
   generateRandomNeurons(2);
 
- // file << endl << exportNeuronsYamlString();
-
   do
   {
     //STEP 1: Select an input signal z from training data
     tdIndex = tdDist(rd);
     
     //STEP 2: Find the 2 nearest neurons, S1 and S2, to the input signal
-    SpatioTemporalNeuron *neuronS1, *neuronS2;
     neuronS1 = neuronS2 = &(*(neurons.begin()));
 
+    //TODO: thread compute distance when neuron count is large
     for(auto &neuron : neurons)
     {
       // estimate distance between input data and all neurons
@@ -289,7 +288,7 @@ void SpatioTemporalLayer::train(TraceData& td)
     for(auto &neuron : neurons)
       neuron.scaleError(0.995f);
 
-  }while(time < 9999999);//TODO: select better stopping criterion
+  }while(time < 15999999);//TODO: select better stopping criterion
 
   end = chrono::system_clock::now();
   chrono::duration<double> elapsed_seconds = end-start;
