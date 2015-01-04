@@ -15,6 +15,7 @@ from numpy import *
 parser = argparse.ArgumentParser(description="To test crbf training")
 parser.add_argument('-t','--train', action='store_true', help='Train neural network without plotting results')
 parser.add_argument('-p','--plot', action='store_true', help='Plot data from previous training')
+parser.add_argument('--gif', action='store_true')
 args = parser.parse_args()
 
 rootDir = os.path.dirname(os.getcwd())
@@ -25,7 +26,7 @@ if not args.plot:
     traceDataList = 'stc_1_list.txt'
 
     # check that build is up to date
-    makeCMD = "make -q -C '{}'".format(rootDir);
+    makeCMD = "make -q --directory='{}'".format(rootDir);
     print(makeCMD)
     if sub.call(makeCMD, shell=True):
         print('\x1B[33mwarning:\x1B[0m build not up to date')
@@ -41,27 +42,32 @@ if not args.train:
     print('\x1B[34m==> \x1B[0m Plotting results')
 
     #setup 3D subplot
-    fig = plt.figure()
+    x,y = plt.figaspect(.75)*1.5
+    fig = plt.figure(figsize=(x,y), tight_layout=True)
     ax = fig.add_subplot(111, projection='3d')
 
     # set axes properties
     ax.set_title('Spatio-temporal Layer Training')
+    ax.view_init(elev=30, azim=-70)
 
     ax.set_xlabel('x')
-    ax.set_xlim3d(0, 1)
+    ax.set_xlim(0, 1)
+    ax.set_xticks([0, 0.5, 1])
 
     ax.set_ylabel('y')
-    ax.set_ylim3d(0, 1)
+    ax.set_ylim(0, 1)
+    ax.set_yticks([0, 0.5, 1])
 
-    zidx = 2
+    zidx = 3
 
     if zidx == 3:
         ax.set_zlabel('time')
-        ax.set_zlim3d(0, 2*np.pi)
+        ax.set_zlim(0, 2*np.pi)
+        ax.set_zticks([0, np.pi, 2*np.pi])
+        ax.set_zticklabels(['0', '$\pi$','2$\pi$'])
     elif zidx == 2:
         ax.set_zlabel('z')
         ax.set_zlim3d(0, 1)
-
 
     print('Plotting normalized training data')
     #load training trace date yaml file
@@ -83,10 +89,12 @@ if not args.train:
         ims.append([lines,nScatter])
 
 
-    ax.legend([tdScatter, (lines, nScatter)] ,['Training Data','Spatio-temporal Neurons'])
-    
+    legend = ax.legend([tdScatter, (lines, nScatter)] ,['Training Data','Spatio-temporal Neurons'], fontsize='medium', loc='lower right')
+    legend.get_frame().set_edgecolor('darkgray')
+
     ani = animation.ArtistAnimation(fig, ims, interval=1500, repeat_delay=3000)
 
-    #ani.save('neural_training.mp4')
+    if args.gif:
+        ani.save('neural_training.gif', writer='imagemagick');
 
     plt.show()
