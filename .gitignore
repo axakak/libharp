@@ -40,3 +40,4 @@ testing/exportTrace.txt
 crbfNeuralNet.yaml
 normalizedTrainingData.yaml
 spatioTemporalTrain.yaml
+*.gif
