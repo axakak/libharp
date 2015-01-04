@@ -1,35 +1,33 @@
-FLAGS = -std=c++11 -stdlib=libc++ -Wall -g -Wno-c++11-extensions
+CXXFLAGS = -std=c++11 -stdlib=libc++ -Wall -g -Wno-c++11-extensions
+LDLIBS = -lyaml-cpp
 BINDIR = bin
 OBJDIR = tmp
+SRCDIR = src
+SUBDIRS =  $(BINDIR) $(OBJDIR)
 
-all: dir $(addprefix bin/, traceDataTester crbfTrainer)
+all: $(SUBDIRS) $(addprefix $(BINDIR)/, traceDataTester crbfTrainer)
 
 $(BINDIR)/traceDataTester: $(addprefix $(OBJDIR)/, traceDataTester.o traceData.o)
-	g++ -o bin/traceDataTester $(addprefix $(OBJDIR)/, traceDataTester.o traceData.o) -lyaml-cpp
+	$(CXX) -o $@ $^ $(LDLIBS)
 
 $(BINDIR)/crbfTrainer: $(addprefix $(OBJDIR)/, crbfTrainer.o c-rbf.o traceData.o)
-	g++ -o bin/crbfTrainer $(addprefix $(OBJDIR)/, crbfTrainer.o c-rbf.o traceData.o) -lyaml-cpp
+	$(CXX) -o $@ $^ $(LDLIBS)
 
-$(OBJDIR)/traceDataTester.o: $(addprefix src/, traceDataTester.cpp traceData.h)
-	g++ -c src/traceDataTester.cpp -o $(OBJDIR)/traceDataTester.o $(FLAGS)
+$(OBJDIR)/traceDataTester.o: $(addprefix $(SRCDIR)/, traceDataTester.cpp traceData.h)
+	$(CXX) -c $< -o $@ $(CXXFLAGS)
 
-$(OBJDIR)/crbfTrainer.o: $(addprefix src/, crbfTrainer.cpp c-rbf.h)
-	g++ -c src/crbfTrainer.cpp -o $(OBJDIR)/crbfTrainer.o $(FLAGS)
+$(OBJDIR)/crbfTrainer.o: $(addprefix $(SRCDIR)/, crbfTrainer.cpp c-rbf.h)
+	$(CXX) -c $< -o $@ $(CXXFLAGS)
 
-$(OBJDIR)/traceData.o: $(addprefix src/, traceData.cpp traceData.h)
-	g++ -c src/traceData.cpp -o tmp/traceData.o $(FLAGS)
+$(OBJDIR)/traceData.o: $(addprefix $(SRCDIR)/, traceData.cpp traceData.h)
+	$(CXX) -c $< -o $@ $(CXXFLAGS)
 
-$(OBJDIR)/c-rbf.o: $(addprefix src/, c-rbf.cpp c-rbf.h traceData.h)
-	g++ -c src/c-rbf.cpp -o tmp/c-rbf.o $(FLAGS)
+$(OBJDIR)/c-rbf.o: $(addprefix $(SRCDIR)/, c-rbf.cpp c-rbf.h traceData.h)
+	$(CXX) -c $< -o $@ $(CXXFLAGS)
 
-dir: | $(OBJDIR) $(BINDIR)
-
-$(OBJDIR):
-	mkdir $(OBJDIR)
-
-$(BINDIR):
-	mkdir $(BINDIR)
+$(SUBDIRS):
+	mkdir $@
 
 clean:
-	rm -f $(BINDIR)/* $(OBJDIR)/*
+	rm -rfv $(BINDIR) $(OBJDIR)
 
