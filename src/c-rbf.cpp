@@ -8,6 +8,8 @@
 #include <iomanip>
 #include <chrono>
 
+//constexpr int g_num_threads = 4;
+
 /************************************************************
  * Spatio-temporal Objects
  ***********************************************************/
@@ -201,14 +203,12 @@ void SpatioTemporalLayer::train(TraceData& td)
     tdIndex = tdDist(rd);
     
     //STEP 2: Find the 2 nearest neurons, S1 and S2, to the input signal
-    neuronS1 = neuronS2 = &(*(neurons.begin()));
-
     //TODO: thread compute distance when neuron count is large
+    computeDistances(td[tdIndex]);
+
+    neuronS1 = neuronS2 = &(*(neurons.begin()));
     for(auto &neuron : neurons)
     {
-      // estimate distance between input data and all neurons
-      neuron.computeDistance(td[tdIndex]);
-
       //keep references to the 2 closest neurons
       if(neuron.getDistance() < neuronS1->getDistance())
       {
@@ -288,7 +288,8 @@ void SpatioTemporalLayer::train(TraceData& td)
     for(auto &neuron : neurons)
       neuron.scaleError(0.995f);
 
-  }while(time < 15999999);//TODO: select better stopping criterion
+  }while(neuronS1->getError());//TODO: select better stopping criterion
+  //}while(time < 15999999);//TODO: select better stopping criterion
 
   end = chrono::system_clock::now();
   chrono::duration<double> elapsed_seconds = end-start;
@@ -298,6 +299,26 @@ void SpatioTemporalLayer::train(TraceData& td)
 
   cout << endl << "Spatio-temporal training completed in "
        << elapsed_seconds.count() << "s" << endl;
+}
+
+
+void SpatioTemporalLayer::computeDistances(const Event& event)
+{
+  // estimate distance between input data and all neurons
+  for(auto &neuron : neurons)
+    neuron.computeDistance(event);
+
+/*
+  thread t[g_num_threads];
+  //XXX: current
+  //Launch a group of threads
+  for(int i = 0; i < g_num_threads; ++i)
+    t[i] = thread(call_from_thread, i);
+
+  //Join the threads with the main thread
+  for(int i = 0; i < g_num_threads; ++i)
+    t[i].join();
+*/
 }
 
 

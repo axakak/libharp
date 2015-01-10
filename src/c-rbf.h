@@ -74,6 +74,7 @@ public:
 
   void evaluate(const Event& event);
   void train(TraceData& td);
+  void computeDistances(const Event& event);
   void generateRandomNeurons(int count);
 
   /*
