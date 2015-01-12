@@ -15,6 +15,7 @@ from numpy import *
 parser = argparse.ArgumentParser(description="To test crbf training")
 parser.add_argument('-t','--train', action='store_true', help='Train neural network without plotting results')
 parser.add_argument('-p','--plot', action='store_true', help='Plot data from previous training')
+parser.add_argument('-z','--zdata', action='store_true', help='Plot z spacial data on the z-axis')
 parser.add_argument('--gif', action='store_true')
 args = parser.parse_args()
 
@@ -58,7 +59,10 @@ if not args.train:
     ax.set_ylim(0, 1)
     ax.set_yticks([0, 0.5, 1])
 
-    zidx = 3
+    if args.zdata:
+        zidx = 2
+    else:
+        zidx = 3
 
     if zidx == 3:
         ax.set_zlabel('time')
