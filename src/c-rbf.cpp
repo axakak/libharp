@@ -35,10 +35,9 @@ void SpatioTemporalNeuron::computeDistance(const Event& event)
 {
   Event q = event - weight;
 
-  gain.amplitude = sqrt((q.x*q.x) + (q.y*q.y) + (q.z*q.z));
-  gain.phase = q.time;
-
-  distance = pow(gain.amplitude,2) + pow(gain.phase/g_pi,2);
+  q.time /= g_pi;
+  
+  distance = (q.x*q.x) + (q.y*q.y) + (q.z*q.z) + (q.time*q.time);
 }
 
 
@@ -203,7 +202,6 @@ void SpatioTemporalLayer::train(TraceData& td)
     tdIndex = tdDist(rd);
     
     //STEP 2: Find the 2 nearest neurons, S1 and S2, to the input signal
-    //TODO: thread compute distance when neuron count is large
     computeDistances(td[tdIndex]);
 
     neuronS1 = neuronS2 = &(*(neurons.begin()));
@@ -268,14 +266,14 @@ void SpatioTemporalLayer::train(TraceData& td)
       //insert new neuron r halfway between q and it's neighbour f with the largest error
       neurons.emplace_back((neuronS1->getWeight() + neuronS2->getWeight())*0.5f);
 
-      //Insert edges connecting r with q and f
+      //insert edges connecting r with q and f
       neurons.back().connect(neuronS1);
       neurons.back().connect(neuronS2);
       
       //remove the edge between q and f
       neuronS1->disconnect(neuronS2);
 
-      //Decrease the error of q and f by multiplying them with a constant _alpha
+      //decrease the error of q and f by multiplying them with a constant _alpha
       neuronS1->scaleError(0.5f);
       neuronS2->scaleError(0.5f);
       
@@ -288,8 +286,7 @@ void SpatioTemporalLayer::train(TraceData& td)
     for(auto &neuron : neurons)
       neuron.scaleError(0.995f);
 
-  }while(neuronS1->getError());//TODO: select better stopping criterion
-  //}while(time < 15999999);//TODO: select better stopping criterion
+  }while(time < 15999999);//TODO: select better stopping criterion
 
   end = chrono::system_clock::now();
   chrono::duration<double> elapsed_seconds = end-start;
@@ -308,6 +305,7 @@ void SpatioTemporalLayer::computeDistances(const Event& event)
   for(auto &neuron : neurons)
     neuron.computeDistance(event);
 
+  //TODO: thread compute distance when neuron count is large
 /*
   thread t[g_num_threads];
   //XXX: current
