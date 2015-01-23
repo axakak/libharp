@@ -3,20 +3,27 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
-
+#include <random>
+#include <algorithm>
 
 TraceData::TraceData(): totalTime(0)
 {
 }
 
+TraceData::TraceData(const string& traceFile)
+{
+  loadYamlFile(traceFile);
+}
 
 void TraceData::loadYamlFile(const string& traceFile)
 {
   YAML::Node doc = YAML::LoadFile(traceFile);
 
-  events.clear();
+  fileName = traceFile;
 
-  //load metadata
+  events.clear();
+  
+  //load metadata 
   //TODO: implement data validation
   patientID = doc["patient-id"].as<std::string>();
   date = doc["date"].as<std::string>();
@@ -29,6 +36,7 @@ void TraceData::loadYamlFile(const string& traceFile)
 
   //load events
   const YAML::Node& eventsNode = doc["events"];
+  //BUG: some old files label "events" as "data" and will not load
 
   for(size_t i = 1; i < eventsNode.size(); i++)
     events.push_back(eventsNode[i].as<Event>());
@@ -38,6 +46,14 @@ void TraceData::loadYamlFile(const string& traceFile)
 
 
 void TraceData::exportYamlFile(const string& traceFile) const
+{
+  ofstream file(traceFile);
+  file << "%YAML 1.2\n" << exportYamlString();
+  file.close();
+}
+
+
+string TraceData::exportYamlString() const
 {
   YAML::Emitter out;
 
@@ -65,10 +81,43 @@ void TraceData::exportYamlFile(const string& traceFile) const
   out << YAML::EndSeq
       << YAML::EndMap;
 
+  return out.c_str();
+}
 
+
+void TraceData::exportCsvFile(const string& traceFile) const
+{
   ofstream file(traceFile);
-  file << "%YAML 1.2\n" << out.c_str();
+
+  file.precision(4);
+  file.setf(ios_base::fixed, ios_base::floatfield);
+
+  file << "x,y,z,time" << endl;
+  
+  for(auto &event : events)
+  {
+    file << event.x << "," << event.y << "," 
+         << event.z << "," << event.time << endl;
+  }
+
   file.close();
+}
+
+
+string TraceData::exportCsvString() const
+{
+  stringstream csvStringStream;
+
+  csvStringStream.precision(4);
+  csvStringStream.setf(ios_base::fixed, ios_base::floatfield);
+  
+  for(auto &event : events)
+  {
+    csvStringStream << event.x << "," << event.y << ","
+                    << event.z << "," << event.time << endl;
+  }
+
+  return csvStringStream.str();
 }
 
 
@@ -102,6 +151,7 @@ void TraceData::normalizeEvents()
 {
   Event eventScale;
 
+  //TODO: find better way to normalize z, values are very scattered -ak
   eventScale.x = 1 / (maxBound.x - minBound.x);
   eventScale.y = 1 / (maxBound.y - minBound.y);
   eventScale.z = 1 / (maxBound.z - minBound.z);
@@ -117,14 +167,17 @@ void TraceData::normalizeEvents()
 }
 
 
-ostream& operator<< (ostream& stream, Event& e)
+void TraceData::shuffleEvents()
 {
-  stream << "x: " << fixed << setprecision(4) << setw(8) << e.x << " "
-         << "y: " << setw(8) << e.y << " "
-         << "z: " << setw(8) << e.z << " "
-         << "time: " << setprecision(1) << setw(8) << e.time;
+  random_device rd;
+  mt19937 g(rd());
+  shuffle(events.begin(), events.end(), g);
+}
 
-  return stream;
+
+void TraceData::insertEvents(TraceData& td)
+{
+  events.insert(events.begin(), td.events.begin(), td.events.end());
 }
 
 
@@ -148,11 +201,21 @@ YAML::Emitter& operator<< (YAML::Emitter& out, const Event& v)
   s << v.z;
   out << s.str();
   s.str("");
-  s << setprecision(1) << v.time;
+  s << v.time;
   out << s.str();
   out << YAML::EndSeq;
 
   return out;
 }
 
+
+ostream& operator<< (ostream& stream, Event& e)
+{
+  stream << "x: " << fixed << setprecision(4) << setw(8) << e.x << " "
+         << "y: " << setw(8) << e.y << " "
+         << "z: " << setw(8) << e.z << " "
+         << "time: " << setw(8) << e.time;
+
+  return stream;
+}
 

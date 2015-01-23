@@ -16,7 +16,7 @@ int main(int argc, char** argv)
        << "total-time: " << trace.getTotalTime() << endl
        << "events:" << endl;
 
-  //trace.normalizeEvents();
+  trace.normalizeEvents();
 
   for(int i = 0; i < trace.size(); i+=1000)
     cout << trace.at(i) << endl;

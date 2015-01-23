@@ -27,3 +27,17 @@ testing/exportTrace.txt
 #############
 
 .DS_Store
+
+#################
+# vim
+#################
+*.swo
+
+
+#################
+# testing output
+#################
+crbfNeuralNet.yaml
+normalizedTrainingData.yaml
+spatioTemporalTrain.yaml
+*.gif

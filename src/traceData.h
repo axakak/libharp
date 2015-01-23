@@ -20,6 +20,31 @@ struct Event
   Event(): x(0), y(0), z(0), time(0){}
   Event(double X, double Y, double Z, double Time): x(X), y(Y), z(Z), time(Time){}
 
+  Event operator-(const Event& rhs) const
+  {
+    return Event(x-rhs.x, y-rhs.y, z-rhs.z, time-rhs.time);
+  }
+
+  Event operator+(const Event& rhs) const
+  {
+    return Event(x+rhs.x, y+rhs.y, z+rhs.z, time+rhs.time);
+  }
+
+  Event operator*(const double rhs) const
+  {
+    return Event(x*rhs,y*rhs,z*rhs,time*rhs);
+  }
+
+  Event& operator+=(const Event& rhs)
+  { 
+    x = x + rhs.x;
+    y = y + rhs.y;
+    z = z + rhs.z;
+    time = time + rhs.time;
+
+    return *this;
+  }
+
   double x,y,z,time;
 };
 
@@ -29,9 +54,14 @@ class TraceData
 public:
   //default constructor
   TraceData();
+  TraceData(const string& traceFile);
 
+  // I/O functions
   void loadYamlFile(const string& traceFile);
   void exportYamlFile(const string& traceFile) const;
+  string exportYamlString() const;
+  void exportCsvFile(const string& traceFile) const;
+  string exportCsvString() const;
 
   // access methods
   string getPaitentID() const;
@@ -68,9 +98,13 @@ public:
   size_t size() const;
 
   void normalizeEvents();
+  void shuffleEvents();
+  void insertEvents(TraceData& td);
 
 private:
   void findMinMaxBounds();
+
+  string fileName;
 
   string patientID;
   string date;
@@ -86,7 +120,9 @@ private:
   Event minBound;
 };
 
-// inline Methods
+/************************************************************
+ *  Inline Methods
+ ***********************************************************/
 
 inline string TraceData::getPaitentID() const
 {
@@ -98,6 +134,7 @@ inline string TraceData::getDate() const
 {
   return date;
 }
+
 
 inline string TraceData::getLocation() const
 {
@@ -152,6 +189,7 @@ inline void TraceData::setPaitentID(string str)
   patientID = str;
 }
 
+
 inline void TraceData::setDate(string str)
 {
   date = str;
@@ -190,7 +228,7 @@ inline void TraceData::setCoordinateSpace(string str)
 
 inline void TraceData::setTotalTime(double time)
 {
- totalTime = time;
+  totalTime = time;
 }
 
 
@@ -245,7 +283,11 @@ inline size_t TraceData::size() const
 ostream& operator<< (ostream& stream, Event& e);
 
 
-YAML::Emitter& operator << (YAML::Emitter& out, const Event& v);
+/************************************************************
+ * YAML parser/emitter
+ ***********************************************************/
+
+YAML::Emitter& operator<< (YAML::Emitter& out, const Event& v);
 
 
 namespace YAML
@@ -276,6 +318,5 @@ namespace YAML
     }
   };
 }
-
 
 #endif //TRACE_DATA_H
