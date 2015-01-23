@@ -37,6 +37,7 @@ testing/exportTrace.txt
 #################
 # testing output
 #################
-test/stc_1_sample/crbfNeuralNet.yaml
-test/stc_1_sample/normalizedTrainingData.yaml
-test/stc_1_sample/spatioTemporalTrain.yaml
+crbfNeuralNet.yaml
+normalizedTrainingData.yaml
+spatioTemporalTrain.yaml
+*.gif

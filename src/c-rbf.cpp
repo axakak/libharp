@@ -1,6 +1,5 @@
 #include "c-rbf.h"
 
-#include <vector>
 #include <thread>
 #include <random>
 #include <algorithm>
@@ -9,22 +8,19 @@
 #include <iomanip>
 #include <chrono>
 
+//constexpr int g_num_threads = 4;
+
 /************************************************************
  * Spatio-temporal Objects
  ***********************************************************/
 
 void SpatioTemporalNeuron::computeGain(const Event& event)
 {
-  double qx, qy, qz;
+  Event q = event - weight;
 
-  qx = event.x - weight.x;
-  qy = event.y - weight.y;
-  qz = event.z - weight.z;
+  gain.amplitude = sqrt( ((q.x*q.x)+(q.y*q.y)+(q.z*q.z))/3 );
+  gain.phase = q.time;
 
-  gain.amplitude = sqrt( ((qx*qx)+(qy*qy)+(qz*qz)) / 3);
-
-  gain.phase =  event.time - weight.time;
- 
   // constrain to <-pi;pi>
   /*
   if(gain.phase > g_pi)
@@ -35,27 +31,117 @@ void SpatioTemporalNeuron::computeGain(const Event& event)
 }
 
 
-YAML::Emitter& operator<< (YAML::Emitter& out, const SpatioTemporalNeuron& v)
+void SpatioTemporalNeuron::computeDistance(const Event& event)
 {
-  out << v.getWeight();
+  Event q = event - weight;
 
-  return out;
+  q.time /= g_pi;
+  
+  distance = (q.x*q.x) + (q.y*q.y) + (q.z*q.z) + (q.time*q.time);
 }
 
 
-string SpatioTemporalLayer::exportNeuronsYamlString() const
+void SpatioTemporalNeuron::incramentEdgeAges()
+{
+  for(auto &edge : edges)
+  {
+    ++edge.second;
+    ++edge.first->edges[this];
+  }
+}
+
+
+void SpatioTemporalNeuron::adapt(const Event& event)
+{
+  //move self towards event
+  weight += (event - weight) * 0.1f;
+  
+  //move neighbors towards event
+  for(auto &edge : edges)
+    edge.first->weight += (event - edge.first->weight) * 0.001f;
+}
+
+
+void SpatioTemporalNeuron::connect(SpatioTemporalNeuron* stNeuron)
+{
+  //set age to zero, if edge does not exist it will be created
+  if(stNeuron != this)
+  {
+    edges[stNeuron] = 0;
+    stNeuron->edges[this] = 0;
+  }
+}
+
+
+void SpatioTemporalNeuron::disconnect(SpatioTemporalNeuron* stNeuron)
+{
+  stNeuron->edges.erase(this);
+  edges.erase(stNeuron);
+}
+
+
+void SpatioTemporalNeuron::disconnectOld(int maxAge)
+{
+  for(auto &edge : edges)
+  {
+    if(edge.second > maxAge)
+    {
+      edge.first->edges.erase(this);
+      edges.erase(edge.first);
+    }
+  }
+}
+
+
+void SpatioTemporalNeuron::neighbourWithLargestError(const SpatioTemporalNeuron* stNeuron)
+{
+  stNeuron = edges.begin()->first;
+
+  for(auto &edge : edges)
+  {
+    if(edge.first->error > stNeuron->error)
+    {
+      stNeuron = edge.first;
+    } 
+  }
+}
+
+
+void SpatioTemporalNeuron::exportConnectionsYaml(YAML::Emitter& e)
+{
+  for(auto &edge : edges)
+    if(!(index > edge.first->index))
+      e  << YAML::Flow
+         << YAML::BeginSeq << index << edge.first->index << YAML::EndSeq;
+}
+
+
+string SpatioTemporalLayer::exportNeuronsYamlString()
 {
   YAML::Emitter out;
 
   out << YAML::BeginDoc
       << YAML::BeginMap
-      << YAML::Key << "spatio-temporal-neurons"
+      << YAML::Key << "spatio-temporal-neuron-weights"
       << YAML::Value << YAML::BeginSeq
       << YAML::Flow
       << YAML::BeginSeq << "x" << "y" << "z" << "time" << YAML::EndSeq;
 
+  int i = 0;
   for(auto &neuron : neurons)
-    out << neuron;
+  {
+    out << neuron.getWeight();
+    neuron.setIndex(i++);
+  }
+
+  out << YAML::EndSeq
+      << YAML::Key << "spatio-temporal-neuron-edges"
+      << YAML::Value << YAML::BeginSeq
+      << YAML::Flow
+      << YAML::BeginSeq << "v1" << "v2" << YAML::EndSeq;
+
+  for(auto &neuron : neurons)
+    neuron.exportConnectionsYaml(out);
 
   out << YAML::EndSeq
       << YAML::EndMap;
@@ -64,7 +150,7 @@ string SpatioTemporalLayer::exportNeuronsYamlString() const
 }
 
 
-void SpatioTemporalLayer::exportNeuronsYamlFile(const string& fileName) const
+void SpatioTemporalLayer::exportNeuronsYamlFile(const string& fileName)
 {
   cout << "Exporting spatio-temporal neurons to " << fileName << endl;
 
@@ -85,69 +171,123 @@ void SpatioTemporalLayer::evaluate(const Event& event)
 }
 
 
-/*
-void SpatioTemporalLayer::evaluateEventThreaded(const Event& event)
-{
-  vector<thread> threads;
-
-  for(int i = 0; i < 5; ++i)
-    threads.push_back(std::thread(evaluateEvent, event, ));
-
-  for(auto& thread : threads)
-    thread.join();
-}
-*/
-
-
 void SpatioTemporalLayer::train(TraceData& td)
 {
   cout << "\x1B[36m==>\x1B[0m "
-       << "Training spatio-temporal layer using neural-gas algorithm" << endl; 
+       << "Training spatio-temporal layer using growing neural-gas algorithm" << endl; 
   
+  unsigned int time = 0;
+  int tdIndex;
+  SpatioTemporalNeuron *neuronS1, *neuronS2;
+
   ofstream file("spatioTemporalTrain.yaml");
   file << "%YAML 1.2";
-
-  generateRandomNeurons(150);
-
-  cout << "Adapting spatio-temporal neurons" << endl;
 
   chrono::time_point<chrono::system_clock> start, end;
   start = chrono::system_clock::now();
 
-  for(int time = 0; time < maxTime; time++)
+  // randomly shuffle trace data
+  td.shuffleEvents();
+
+  // setup random number generation
+  std::random_device rd;
+  std::uniform_int_distribution<int> tdDist(0,td.size());
+
+  //STEP 0: Generate 2 neurons at random positions
+  generateRandomNeurons(2);
+
+  do
   {
-    double eps = epsilon(time);
-    double lam = lambda(time);
-
-    file << endl << exportNeuronsYamlString();
-
-    cout << "\x1B[1K\x1B[10D" << setw(3) << (float(time)/maxTime)*100 << "%";
-    cout.flush();  
+    //STEP 1: Select an input signal z from training data
+    tdIndex = tdDist(rd);
     
-    // randomly shuffle trace data
-    td.shuffleEvents();
+    //STEP 2: Find the 2 nearest neurons, S1 and S2, to the input signal
+    computeDistances(td[tdIndex]);
 
-    for(int dataIndex = 0; dataIndex < td.size(); dataIndex++)
+    neuronS1 = neuronS2 = &(*(neurons.begin()));
+    for(auto &neuron : neurons)
     {
-      // estimate distance between input data and all neurons
-      evaluate(td[dataIndex]);
-
-      //convert distance to magnitude
-      for(auto &neuron : neurons)
-        neuron.setGain(hypot(neuron.getGain().amplitude, neuron.getGain().phase/g_pi));
-
-      //TODO: Find/implement improved sorting method
-      // sort neurons in increasing distance from input data
-      std::sort(neurons.begin(), neurons.end(),
-        [](SpatioTemporalNeuron lhs, SpatioTemporalNeuron rhs)
-        {return lhs.getGain().amplitude < rhs.getGain().amplitude;});
-
-      // calculate adaptation step for the weights
-      for(int k = 0; k < neurons.size(); k++)
-        neurons[k].accumulateOffset(td[dataIndex], eps*exp(-k/lam));
+      //keep references to the 2 closest neurons
+      if(neuron.getDistance() < neuronS1->getDistance())
+      {
+        neuronS2 = neuronS1;
+        neuronS1 = &neuron;
+      }
+      else if(neuron.getDistance() < neuronS2->getDistance())
+      {
+        neuronS1 = &neuron;
+      }
     }
-  }
-  
+
+    //step 3: Increment the age of all the edges emanating from S1
+    neuronS1->incramentEdgeAges();
+
+    //step 4: Add the squared distance between the input signal and S1 to S1 error
+    neuronS1->accumulateError();
+    
+    //step 5: Move S1 and its connected neighbors towards z
+    neuronS1->adapt(td[tdIndex]);
+
+    //step 6: If S1 and S2 are connected by an edge, set the age of the edge to 0. If such an age does not exist create it
+    neuronS1->connect(neuronS2);
+
+    //step 7: Remove edges with an age larger than a_max. If this results in neurons having no emanating edges, remove them as well.
+    neuronS1->disconnectOld(50);
+
+    for(auto it = neurons.begin(); it != neurons.end(); ++it)
+    {
+      if(it->noEdges())
+      {
+        neurons.erase(it);
+      }
+    }
+
+    //step 8: If the number of input signals selected is a multiple of lam, insert new neuron
+    if(!(time%60000))
+    {
+      cout << "\x1B[1K\x1B[40D" << "nc:" << neurons.size() <<  "  t:" << time;
+      
+      if(!(time%350000))
+        file << endl << exportNeuronsYamlString();
+
+      //Determine the neuron q with max accumulated error
+      for(auto &neuron : neurons)
+      {
+        if(neuron.getError() > neuronS1->getError())
+          neuronS1 = &neuron;
+      }
+
+      cout << "  e:" << setprecision(4) << neuronS1->getError();
+      cout.flush();
+
+      //find the neighbour f of q with the largest error
+      neuronS1->neighbourWithLargestError(neuronS2);
+          
+      //insert new neuron r halfway between q and it's neighbour f with the largest error
+      neurons.emplace_back((neuronS1->getWeight() + neuronS2->getWeight())*0.5f);
+
+      //insert edges connecting r with q and f
+      neurons.back().connect(neuronS1);
+      neurons.back().connect(neuronS2);
+      
+      //remove the edge between q and f
+      neuronS1->disconnect(neuronS2);
+
+      //decrease the error of q and f by multiplying them with a constant _alpha
+      neuronS1->scaleError(0.5f);
+      neuronS2->scaleError(0.5f);
+      
+      //initialize the error of r with the new error of q
+      neurons.back().setError(neuronS1->getError());
+    }
+    ++time;
+
+    //step 9: Decrease all the error variables by multiplying them with a constant d
+    for(auto &neuron : neurons)
+      neuron.scaleError(0.995f);
+
+  }while(time < 15999999);//TODO: select better stopping criterion
+
   end = chrono::system_clock::now();
   chrono::duration<double> elapsed_seconds = end-start;
 
@@ -159,10 +299,29 @@ void SpatioTemporalLayer::train(TraceData& td)
 }
 
 
+void SpatioTemporalLayer::computeDistances(const Event& event)
+{
+  // estimate distance between input data and all neurons
+  for(auto &neuron : neurons)
+    neuron.computeDistance(event);
+
+  //TODO: thread compute distance when neuron count is large
+/*
+  thread t[g_num_threads];
+  //XXX: current
+  //Launch a group of threads
+  for(int i = 0; i < g_num_threads; ++i)
+    t[i] = thread(call_from_thread, i);
+
+  //Join the threads with the main thread
+  for(int i = 0; i < g_num_threads; ++i)
+    t[i].join();
+*/
+}
+
+
 void SpatioTemporalLayer::generateRandomNeurons(int count)
 {
-  cout << "Generating random spatio-temporal neurons" << endl; 
-
   // assign initial values to the weights with |w| <= 1 & 〈w <= 2pi
   std::random_device rd;// if too slow, use as seed to pseudo-random generator
   std::uniform_real_distribution<> sDist(0,1);// range not inclusive [0,1)
@@ -170,7 +329,6 @@ void SpatioTemporalLayer::generateRandomNeurons(int count)
 
   neurons.clear();
 
-  //TODO:LATER: use dynamic neuron count (thesis topic)
   for(int i = 0; i < count; i++)
     neurons.emplace_back(sDist(rd),sDist(rd),sDist(rd),tDist(rd));
 }
@@ -193,8 +351,9 @@ void ClassNeuron::computeGain(const SpatioTemporalLayer& stl)
   // and compute the gain for that neuron
   for(int k = 0; k < weights.size(); k++)
   {
-    re = omega(stl[k].getGain().amplitude, weights[k].amplitude);
-    im = omega(stl[k].getGain().phase, weights[k].phase/g_pi);
+    //TODO: replace stl [] with somthing that works with lists
+    //re = omega(stl[k].getGain().amplitude, weights[k].amplitude);
+    //im = omega(stl[k].getGain().phase, weights[k].phase/g_pi);
     magnitude = hypot(re,im);
 
     if(magnitude < minMagnitude)
@@ -206,7 +365,7 @@ void ClassNeuron::computeGain(const SpatioTemporalLayer& stl)
     }
   }
 
-  gain.phase = copysign(g_pi*gain.phase, stl[kBMU].getGain().phase);
+  //gain.phase = copysign(g_pi*gain.phase, stl[kBMU].getGain().phase);
 }
 
 
@@ -292,7 +451,7 @@ void CRBFNeuralNetwork::train(const string& traceFileList)
 }
 
 
-void CRBFNeuralNetwork::exportYamlFile(const string& nnFile) const
+void CRBFNeuralNetwork::exportYamlFile(const string& nnFile)
 {
   cout << "Exporting neural network to " << nnFile << endl;
 
@@ -357,3 +516,16 @@ void CRBFNeuralNetwork::loadTraceFileList(const string& traceFileList)
 
   fileList.close();
 }
+
+
+/************************************************************
+ * YAML parser/emitter
+ ***********************************************************/
+
+YAML::Emitter& operator<< (YAML::Emitter& out, const SpatioTemporalNeuron& v)
+{
+  out << v.getWeight();
+
+  return out;
+}
+
