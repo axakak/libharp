@@ -10,7 +10,11 @@
 //3rd party libs
 #include <yaml-cpp/yaml.h>
 
-constexpr double g_pi = 3.14159265358979323846;
+#if _MSC_VER >= 1700 && _MSC_VER < 1800 //for Visual Studio 2012
+  const double g_pi = 3.14159265358979323846;
+#else
+  constexpr double g_pi = 3.14159265358979323846;
+#endif
 
 using namespace std;
 
