@@ -41,3 +41,4 @@ crbfNeuralNet.yaml
 normalizedTrainingData.yaml
 spatioTemporalTrain.yaml
 *.gif
+*.png
