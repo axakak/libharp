@@ -9,3 +9,5 @@ $TDT $INPUTTRACEDATA
 #TODO: add validation for export file
 
 #sed -i '' -e 's/data/events/g' *.txt
+#sed -i '' -e '/^[[:space:]]*$/d' *.txt
+#sed -i '' -e 's/data/events/g' -e '/^[[:space:]]*$/d' -e 's/^patient-id: /&""/' -e 's/^location: /&""/' *.txt
