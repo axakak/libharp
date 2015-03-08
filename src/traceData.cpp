@@ -22,21 +22,29 @@ void TraceData::loadYamlFile(const string& traceFile)
   fileName = traceFile;
 
   events.clear();
-  
-  //load metadata 
+
+  //load metadata
   //TODO: implement data validation
   patientID = doc["patient-id"].as<std::string>();
   date = doc["date"].as<std::string>();
   location = doc["location"].as<std::string>();
-  patternType = doc["pattern"]["type"].as<std::string>();
-  patternLevel = doc["pattern"]["level"].as<int>();
+
+  if(doc["pattern"])
+    patternType = doc["pattern"]["type"].as<std::string>();
+    patternLevel = doc["pattern"]["level"].as<int>();
+
+  if(doc["classification"])
+    classificationGroup = doc["classification"]["group"].as<int>();
+  else
+    classificationGroup = 0;
+
   workspace = doc["workspace"].as<std::string>();
   coordinateSpace = doc["coordinate-space"].as<std::string>();
   totalTime = doc["total-time"].as<double>();
 
   //load events
+  //FIXME: some old files label "events" as "data" and will not load
   const YAML::Node& eventsNode = doc["events"];
-  //BUG: some old files label "events" as "data" and will not load
 
   for(size_t i = 1; i < eventsNode.size(); i++)
     events.push_back(eventsNode[i].as<Event>());
@@ -67,6 +75,11 @@ string TraceData::exportYamlString() const
         << YAML::Key << "type" << YAML::Value << patternType
         << YAML::Key << "level" << YAML::Value << patternLevel
       << YAML::EndMap
+      << YAML::Key << "classification"
+      << YAML::BeginMap
+        << YAML::Key << "group" << YAML::Value << classificationGroup
+      << YAML::EndMap
+      << YAML::Key << "workspace" << YAML::Value << workspace
       << YAML::Key << "workspace" << YAML::Value << workspace
       << YAML::Key << "coordinate-space" << YAML::Value << coordinateSpace
       << YAML::Key << "total-time" << YAML::Value << totalTime
@@ -93,10 +106,10 @@ void TraceData::exportCsvFile(const string& traceFile) const
   file.setf(ios_base::fixed, ios_base::floatfield);
 
   file << "x,y,z,time" << endl;
-  
+
   for(auto &event : events)
   {
-    file << event.x << "," << event.y << "," 
+    file << event.x << "," << event.y << ","
          << event.z << "," << event.time << endl;
   }
 
@@ -110,7 +123,7 @@ string TraceData::exportCsvString() const
 
   csvStringStream.precision(4);
   csvStringStream.setf(ios_base::fixed, ios_base::floatfield);
-  
+
   for(auto &event : events)
   {
     csvStringStream << event.x << "," << event.y << ","
@@ -131,17 +144,17 @@ void TraceData::findMinMaxBounds()
   {
     if(event.x > maxBound.x)
       maxBound.x = event.x;
-    else if(event.x < minBound.x) 
+    else if(event.x < minBound.x)
       minBound.x = event.x;
 
     if(event.y > maxBound.y)
       maxBound.y = event.y;
-    else if(event.y < minBound.y) 
+    else if(event.y < minBound.y)
       minBound.y = event.y;
 
     if(event.z > maxBound.z)
       maxBound.z = event.z;
-    else if(event.z < minBound.z) 
+    else if(event.z < minBound.z)
       minBound.z = event.z;
   }
 }
@@ -184,7 +197,7 @@ void TraceData::insertEvents(TraceData& td)
 YAML::Emitter& operator<< (YAML::Emitter& out, const Event& v)
 {
   //yaml-cpp does not support fixed floating-point formatting,
-  //osrtingstream is only used for formatting. 
+  //osrtingstream is only used for formatting.
   //TODO: replace with faster formatting procedure. -ak
 
   ostringstream s;
@@ -218,4 +231,3 @@ ostream& operator<< (ostream& stream, Event& e)
 
   return stream;
 }
-

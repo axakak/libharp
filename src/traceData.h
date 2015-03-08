@@ -40,7 +40,7 @@ struct Event
   }
 
   Event& operator+=(const Event& rhs)
-  { 
+  {
     x = x + rhs.x;
     y = y + rhs.y;
     z = z + rhs.z;
@@ -53,7 +53,7 @@ struct Event
 };
 
 
-class TraceData 
+class TraceData
 {
 public:
   //default constructor
@@ -73,6 +73,7 @@ public:
   string getLocation() const;
   string getPatternType() const;
   int getPatternLevel() const;
+  int getClassificationGroup() const;
   string getWorkspace() const;
   string getCoordinateSpace() const;
   double getTotalTime() const;
@@ -85,6 +86,7 @@ public:
   void setLocation(string);
   void setPatternType(string);
   void setPatternLevel(int);
+  void setClassificationGroup(int);
   void setWorkspace(string);
   void setCoordinateSpace(string);
   void setTotalTime(double time);
@@ -115,6 +117,7 @@ private:
   string location;
   string patternType;
   int patternLevel;
+  int classificationGroup;
   string workspace;
   string coordinateSpace;
   double totalTime;
@@ -155,6 +158,12 @@ inline string TraceData::getPatternType() const
 inline int TraceData::getPatternLevel() const
 {
   return patternLevel;
+}
+
+
+inline int TraceData::getClassificationGroup() const
+{
+  return classificationGroup;
 }
 
 
@@ -215,6 +224,12 @@ inline void TraceData::setPatternType(string str)
 inline void TraceData::setPatternLevel(int pLevel)
 {
   patternLevel = pLevel;
+}
+
+
+inline void TraceData::setClassificationGroup(int classGroup)
+{
+  classificationGroup = classGroup;
 }
 
 
