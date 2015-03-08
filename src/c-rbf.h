@@ -13,6 +13,8 @@ using namespace std;
 
 struct Complex
 {
+  Complex(): amplitude(0), phase(0){}
+
   double amplitude, phase;
 };
 
@@ -53,6 +55,7 @@ public:
   void disconnectOld(int maxAge);
   void neighbourWithLargestError(const SpatioTemporalNeuron* stNeuron);
   bool noEdges() const;
+  void assignEvent(int cGroup, const Event& event);
 
   void exportConnectionsYaml(YAML::Emitter& e);
 
@@ -63,6 +66,7 @@ private:
   double distance;
   double error;
   int index;
+  unordered_multimap<int, const Event*> eventCluster;
 };
 
 
@@ -76,6 +80,7 @@ public:
   void train(TraceData& td);
   void computeDistances(const Event& event);
   void generateRandomNeurons(int count);
+  void assignEventsToNeurons(const vector<TraceData>& traces);
 
   /*
   SpatioTemporalNeuron& operator[](size_t pos);
@@ -83,6 +88,8 @@ public:
   */
 
 private:
+  //list container was selected for constant insert and delete times,
+  //this is only important during training
   list<SpatioTemporalNeuron> neurons;
 };
 
@@ -103,19 +110,19 @@ private:
   /* Vector of N weights, one for each ST neuron */
   vector<Complex> weights;
   Complex gain;
-  //int kBMU;
 };
 
 
 class ClassLayer
 {
 public:
+  void train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv);
   void evaluate(const SpatioTemporalLayer& stl);
 
   ClassNeuron& operator[](size_t pos);
 
 private:
-  vector<ClassNeuron> neurons;
+  vector<ClassNeuron> neurons;//TODO: change to map?
 };
 
 
@@ -129,14 +136,15 @@ public:
   CRBFNeuralNetwork(): trace(){}
 
   CRBFNeuralNetwork(const CRBFNeuralNetwork& orig);
-  
+
   void evaluateTrace();
 
   void train(const string& traceFileList);
   void exportYamlFile(const string& traceFile);
-  void exportCsvFile(const string& mTracesFile) const;
+  void exportCsvFile(const string& tracesFile) const;
   void loadTraceFileList(const string& traceFileList);
-  void exportMTraceYamlFile(const string& mTracesFile) const;
+  void exportTracesYamlFile(const string& tracesFile) const;
+  void loadCRBFNeuralNetworkFile(const string& crbfFile);
 
 private:
   double computeErrorIncrement(const Complex& gain);
@@ -144,7 +152,7 @@ private:
   /* Input */
   TraceData trace;
 
-  vector<TraceData> mTraces;
+  vector<TraceData> traces;
 
   /* Neural Network Layers */
   SpatioTemporalLayer stLayer;
