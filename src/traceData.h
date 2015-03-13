@@ -102,6 +102,8 @@ public:
   void pop_back();
   bool empty() const;
   size_t size() const;
+  vector<Event>::iterator begin();
+  vector<Event>::iterator end();
 
   void normalizeEvents();
   void shuffleEvents();
@@ -296,6 +298,18 @@ inline bool TraceData::empty() const
 inline size_t TraceData::size() const
 {
   return events.size();
+}
+
+
+inline vector<Event>::iterator TraceData::begin()
+{
+  return events.begin();
+}
+
+
+inline vector<Event>::iterator TraceData::end()
+{
+  return events.end();
 }
 
 
