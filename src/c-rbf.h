@@ -26,10 +26,10 @@ class SpatioTemporalNeuron
 {
 public:
   SpatioTemporalNeuron(double X, double Y, double Z, double Time)
-    :weight(X, Y, Z, Time), distance(0), error(0){}
+    :weight(X, Y, Z, Time), error(0){}
 
   SpatioTemporalNeuron(const Event& w)
-    :weight(w), distance(0), error(0){}
+    :weight(w), error(0){}
 
   //accessor/mutator methods
   void setWeight(const Event& event);
@@ -39,14 +39,13 @@ public:
   const Event& getWeight() const;
   const Complex& getGain() const;
   double getError() const;
-  double getDistance() const;
 
   //evaluation methods
   void computeGain(const Event& event);
 
   //training methods
-  void computeDistance(const Event& event);
-  void accumulateError();
+  double computeDistance(const Event& event) const;
+  void accumulateError(double err);
   void scaleError(double factor);
   void incramentEdgeAges();
   void adapt(const Event& event);
@@ -62,10 +61,9 @@ public:
 private:
   Event weight;
   Complex gain;
-  unordered_map<SpatioTemporalNeuron*, int> edges;
-  double distance;
   double error;
   int index;
+  unordered_map<SpatioTemporalNeuron*, int> edges;
   unordered_multimap<int, const Event*> eventCluster;
 };
 
@@ -78,9 +76,12 @@ public:
 
   void evaluate(const Event& event);
   void train(TraceData& td);
-  void computeDistances(const Event& event);
-  void generateRandomNeurons(int count);
+  void initRandomNeurons(int count);
   void assignEventsToNeurons(const vector<TraceData>& traces);
+
+  SpatioTemporalNeuron* findNeuronNearestToEvent(const Event& event);
+  std::pair<SpatioTemporalNeuron*, SpatioTemporalNeuron*>
+   findNeuronsNearestToEvent(const Event& event);
 
   /*
   SpatioTemporalNeuron& operator[](size_t pos);
@@ -89,7 +90,7 @@ public:
 
 private:
   //list container was selected for constant insert and delete times,
-  //this is only important during training
+  //which is only important during training
   list<SpatioTemporalNeuron> neurons;
 };
 
@@ -107,9 +108,13 @@ public:
 private:
   double omega(double x, double w);
 
+  //training methods
+  void computeWeights(SpatioTemporalLayer& stl);
+
   /* Vector of N weights, one for each ST neuron */
   vector<Complex> weights;
   Complex gain;
+  //int classGroup;
 };
 
 
@@ -192,9 +197,9 @@ inline void SpatioTemporalNeuron::setIndex(int i)
 }
 
 
-inline void SpatioTemporalNeuron::accumulateError()
+inline void SpatioTemporalNeuron::accumulateError(double err)
 {
-  error += distance;
+  error += err;
 }
 
 
@@ -219,12 +224,6 @@ inline const Event& SpatioTemporalNeuron::getWeight() const
 inline double SpatioTemporalNeuron::getError() const
 {
   return error;
-}
-
-
-inline double SpatioTemporalNeuron::getDistance() const
-{
-  return distance;
 }
 
 inline bool SpatioTemporalNeuron::noEdges() const

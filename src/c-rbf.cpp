@@ -10,6 +10,7 @@
 
 //constexpr int g_num_threads = 4;
 
+
 /************************************************************
  * Spatio-temporal Objects
  ***********************************************************/
@@ -31,14 +32,14 @@ void SpatioTemporalNeuron::computeGain(const Event& event)
 }
 
 
-void SpatioTemporalNeuron::computeDistance(const Event& event)
+double SpatioTemporalNeuron::computeDistance(const Event& event) const
 {
   //TODO: revaluate the correctness of this method, consolidate with compute gain
   Event q = event - weight;
 
   q.time /= g_pi;
 
-  distance = (q.x*q.x) + (q.y*q.y) + (q.z*q.z) + (q.time*q.time);
+  return ((q.x*q.x) + (q.y*q.y) + (q.z*q.z) + (q.time*q.time));
 }
 
 
@@ -185,7 +186,7 @@ void SpatioTemporalLayer::train(TraceData& td)
 
   unsigned int time = 0;
   int tdIndex = 0;
-  SpatioTemporalNeuron *neuronS1 = 0, *neuronS2 = 0;
+  SpatioTemporalNeuron *neuronS1 = NULL, *neuronS2 = NULL;
 
   ofstream file("spatioTemporalTrain.yaml");
   file << "%YAML 1.2";
@@ -200,8 +201,8 @@ void SpatioTemporalLayer::train(TraceData& td)
   std::random_device rd;
   std::uniform_int_distribution<int> tdDist(0,td.size());
 
-  //STEP 0: Generate 2 neurons at random positions
-  generateRandomNeurons(2);
+  //STEP 0: Initilize 2 neurons at random positions
+  initRandomNeurons(2);
 
   do
   {
@@ -209,29 +210,13 @@ void SpatioTemporalLayer::train(TraceData& td)
     tdIndex = tdDist(rd);
 
     //STEP 2: Find the 2 nearest neurons, S1 and S2, to the input signal
-    computeDistances(td[tdIndex]);
-
-    neuronS1 = &(*(neurons.begin()));
-    neuronS2 = &(*(neurons.rbegin()));
-    for(auto &neuron : neurons)
-    {
-      //keep references to the 2 closest neurons
-      if(neuron.getDistance() < neuronS1->getDistance())
-      {
-        neuronS2 = neuronS1;
-        neuronS1 = &neuron;
-      }
-      else if(neuron.getDistance() < neuronS2->getDistance())
-      {
-        neuronS1 = &neuron;
-      }
-    }
+    std::tie(neuronS1, neuronS2) = findNeuronsNearestToEvent(td[tdIndex]);
 
     //step 3: Increment the age of all the edges emanating from S1
     neuronS1->incramentEdgeAges();
 
     //step 4: Add the squared distance between the input signal and S1 to S1 error
-    neuronS1->accumulateError();
+    neuronS1->accumulateError(neuronS1->computeDistance(td[tdIndex]));
 
     //step 5: Move S1 and its connected neighbors towards z
     neuronS1->adapt(td[tdIndex]);
@@ -309,27 +294,7 @@ void SpatioTemporalLayer::train(TraceData& td)
 }
 
 
-void SpatioTemporalLayer::computeDistances(const Event& event)
-{
-  // estimate distance between input data and all neurons
-  for(auto &neuron : neurons)
-    neuron.computeDistance(event);
-
-  //TODO: thread compute distance when neuron count is large
-/*
-  thread t[g_num_threads];
-  //Launch a group of threads
-  for(int i = 0; i < g_num_threads; ++i)
-    t[i] = thread(call_from_thread, i);
-
-  //Join the threads with the main thread
-  for(int i = 0; i < g_num_threads; ++i)
-    t[i].join();
-*/
-}
-
-
-void SpatioTemporalLayer::generateRandomNeurons(int count)
+void SpatioTemporalLayer::initRandomNeurons(int count)
 {
   // assign initial values to the weights with |w| <= 1 & 〈w <= 2pi
   std::random_device rd;// if too slow, use as seed to pseudo-random generator
@@ -343,32 +308,79 @@ void SpatioTemporalLayer::generateRandomNeurons(int count)
 }
 
 
+SpatioTemporalNeuron*
+ SpatioTemporalLayer::findNeuronNearestToEvent(const Event& event)
+{
+  SpatioTemporalNeuron *n1 = &(*(neurons.begin()));
+  double distance1 = n1->computeDistance(event),
+         newDistance = 0;
+
+  for(auto &neuron : neurons)
+  {
+    newDistance = neuron.computeDistance(event);
+
+    if(newDistance < distance1)
+    {
+      n1 = &neuron;
+      distance1 = newDistance;
+    }
+  }
+
+  return n1;
+}
+
+
+std::pair<SpatioTemporalNeuron*, SpatioTemporalNeuron*>
+ SpatioTemporalLayer::findNeuronsNearestToEvent(const Event& event)
+{
+  SpatioTemporalNeuron *n1 = &(*(neurons.begin())),
+                       *n2 = &(*(neurons.rbegin()));
+  double distance1 = n1->computeDistance(event),
+         distance2 = n2->computeDistance(event),
+         newDistance = 0;
+
+  for(auto &neuron : neurons)
+  {
+    newDistance = neuron.computeDistance(event);
+
+    if(newDistance < distance1)
+    {
+      n2 = n1;
+      n1 = &neuron;
+      distance2 = distance1;
+      distance1 = newDistance;
+    }
+    else if(newDistance < distance2)
+    {
+      n2 = &neuron;
+      distance2 = newDistance;
+    }
+  }
+
+  return make_pair(n1, n2);
+}
+
+
 void SpatioTemporalLayer::assignEventsToNeurons(const vector<TraceData>& traces)
 {
-  SpatioTemporalNeuron *nNeuron = &(*(neurons.begin()));
+  SpatioTemporalNeuron *nNeuron = NULL;
   unsigned int eventCount = 0;
 
-  //for each trace in training set(XXX:TODO: this can be threaded)
+  //for each trace in training set
+  //(XXX:TODO: this could be threaded)
   for(auto &trace : traces)
   { //for each event in trace
     for(unsigned int tdIndex = 0; tdIndex < trace.size(); tdIndex++)
     {
-      //compute the distance to all st-layer neurons
-      computeDistances(trace[tdIndex]);
-
       //find the st-layer neuron nearest to event
-      for(auto &neuron : neurons)
-      {
-        if(neuron.getDistance() < nNeuron->getDistance())
-          nNeuron = &neuron;
-      }
+      nNeuron = findNeuronNearestToEvent(trace[tdIndex]);
 
       //assign event to st-layer neuron cluster
       nNeuron->assignEvent(trace.getClassificationGroup(), trace[tdIndex]);
-
-      eventCount++;
-      cout << "\x1B[1K\x1B[40D" << "events assigned: " << eventCount;
     }
+
+    eventCount += trace.size();
+    cout << "\x1B[1K\x1B[40D" << "events assigned: " << eventCount;
   }
   cout << endl;
 }
@@ -416,6 +428,21 @@ double ClassNeuron::omega(double x, double w)
 }
 
 
+void ClassNeuron::computeWeights(SpatioTemporalLayer& stLayer)
+{
+  /*
+  //TODO: for each neuron in the stLayer
+  for(auto &stNeuron : stLayer)
+  { //TODO: for each event clustered around stNeuron
+    for(auto &event : stNeuron)
+    {
+
+    }
+  }
+  */
+}
+
+
 //XXX: Current top level method, not complete...
 void ClassLayer::train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv)
 {
@@ -433,11 +460,13 @@ void ClassLayer::train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv)
   //XXX: current
 
   //TODO: for each class calculate the weight of each st-layer neuron
+  //for(auto &neuron : neurons)
+    //neuron.computeWeights(stl);
+
+  //TODO: collect garbage
 
   end = chrono::system_clock::now();
   chrono::duration<double> elapsed_seconds = end-start;
-
-  //TODO: collect garbage
 
   cout << "Class layer training completed in "
        << elapsed_seconds.count() << "s" << endl;
