@@ -104,6 +104,8 @@ public:
   size_t size() const;
   vector<Event>::iterator begin();
   vector<Event>::iterator end();
+  vector<Event>::const_iterator begin() const;
+  vector<Event>::const_iterator end() const;
 
   void normalizeEvents();
   void shuffleEvents();
@@ -307,7 +309,19 @@ inline vector<Event>::iterator TraceData::begin()
 }
 
 
+inline vector<Event>::const_iterator TraceData::begin() const
+{
+  return events.begin();
+}
+
+
 inline vector<Event>::iterator TraceData::end()
+{
+  return events.end();
+}
+
+
+inline vector<Event>::const_iterator TraceData::end() const
 {
   return events.end();
 }
