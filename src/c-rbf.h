@@ -14,6 +14,7 @@ using namespace std;
 struct Complex
 {
   Complex(): amplitude(0), phase(0){}
+  Complex(double amp, double ph): amplitude(amp), phase(ph){}
 
   double amplitude, phase;
 };
@@ -41,7 +42,7 @@ public:
   double getError() const;
 
   //evaluation methods
-  void computeGain(const Event& event);
+  Complex computeGain(const Event& event) const;
 
   //training methods
   double computeDistance(const Event& event) const;
@@ -54,17 +55,14 @@ public:
   void disconnectOld(int maxAge);
   void neighbourWithLargestError(const SpatioTemporalNeuron* stNeuron);
   bool noEdges() const;
-  void assignEvent(int cGroup, const Event& event);
 
   void exportConnectionsYaml(YAML::Emitter& e);
 
 private:
   Event weight;
-  Complex gain;
   double error;
   int index;
   unordered_map<SpatioTemporalNeuron*, int> edges;
-  unordered_multimap<int, const Event*> eventCluster;
 };
 
 
@@ -77,7 +75,6 @@ public:
   void evaluate(const Event& event);
   void train(TraceData& td);
   void initRandomNeurons(int count);
-  void assignEventsToNeurons(const vector<TraceData>& traces);
 
   SpatioTemporalNeuron* findNeuronNearestToEvent(const Event& event);
   std::pair<SpatioTemporalNeuron*, SpatioTemporalNeuron*>
@@ -104,6 +101,7 @@ class ClassNeuron
 public:
   void computeGain(const SpatioTemporalLayer& stl);
   const Complex& getGain() const;
+  int getClassGroup() const {return classGroup;}
 
 private:
   double omega(double x, double w);
@@ -114,7 +112,7 @@ private:
   /* Vector of N weights, one for each ST neuron */
   vector<Complex> weights;
   Complex gain;
-  //int classGroup;
+  int classGroup;
 };
 
 
@@ -172,13 +170,6 @@ private:
  *  Inline Methods
  ***********************************************************/
 
-inline void SpatioTemporalNeuron::setGain(double amp, double ph)
-{
-  gain.amplitude = amp;
-  gain.phase = ph;
-}
-
-
 inline void SpatioTemporalNeuron::setWeight(const Event& event)
 {
   weight = event;
@@ -206,12 +197,6 @@ inline void SpatioTemporalNeuron::accumulateError(double err)
 inline void SpatioTemporalNeuron::scaleError(double factor)
 {
   error *= factor;
-}
-
-
-inline const Complex& SpatioTemporalNeuron::getGain() const
-{
-  return gain;
 }
 
 

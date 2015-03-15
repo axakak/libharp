@@ -15,12 +15,12 @@
  * Spatio-temporal Objects
  ***********************************************************/
 
-void SpatioTemporalNeuron::computeGain(const Event& event)
+Complex SpatioTemporalNeuron::computeGain(const Event& event) const
 {
   Event q = event - weight;
 
-  gain.amplitude = sqrt( ((q.x*q.x)+(q.y*q.y)+(q.z*q.z))/3 );
-  gain.phase = q.time;
+  double a = sqrt( ((q.x*q.x)+(q.y*q.y)+(q.z*q.z))/3 );
+  double p = q.time;
 
   // constrain to <-pi;pi>
   /*
@@ -29,6 +29,8 @@ void SpatioTemporalNeuron::computeGain(const Event& event)
   else if(gain.phase < -g_pi)
     gain.phase += 2*g_pi;
   */
+
+  return Complex(a, p);
 }
 
 
@@ -106,12 +108,6 @@ void SpatioTemporalNeuron::neighbourWithLargestError(const SpatioTemporalNeuron*
       stNeuron = edge.first;
     }
   }
-}
-
-
-void SpatioTemporalNeuron::assignEvent(int group, const Event& event)
-{
-  eventCluster.insert( {{group, &event}} );
 }
 
 
@@ -361,31 +357,6 @@ std::pair<SpatioTemporalNeuron*, SpatioTemporalNeuron*>
 }
 
 
-void SpatioTemporalLayer::assignEventsToNeurons(const vector<TraceData>& traces)
-{
-  SpatioTemporalNeuron *nNeuron = NULL;
-  unsigned int eventCount = 0;
-
-  //for each trace in training set
-  //(XXX:TODO: this could be threaded)
-  for(auto &trace : traces)
-  { //for each event in trace
-    for(unsigned int tdIndex = 0; tdIndex < trace.size(); tdIndex++)
-    {
-      //find the st-layer neuron nearest to event
-      nNeuron = findNeuronNearestToEvent(trace[tdIndex]);
-
-      //assign event to st-layer neuron cluster
-      nNeuron->assignEvent(trace.getClassificationGroup(), trace[tdIndex]);
-    }
-
-    eventCount += trace.size();
-    cout << "\x1B[1K\x1B[40D" << "events assigned: " << eventCount;
-  }
-  cout << endl;
-}
-
-
 /************************************************************
  * Class Objects
  ***********************************************************/
@@ -446,6 +417,8 @@ void ClassNeuron::computeWeights(SpatioTemporalLayer& stLayer)
 //XXX: Current top level method, not complete...
 void ClassLayer::train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv)
 {
+  unordered_map<const SpatioTemporalNeuron* ,unordered_multimap<int, const Event*> > eventClusters;
+
   cout << "\x1B[36m==>\x1B[0m " << "Training class layer" << endl;
 
   chrono::time_point<chrono::system_clock> start, end;
@@ -455,15 +428,70 @@ void ClassLayer::train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv)
   //countClasses(tdv);
 
   //seperate training data into N sets, one for each neuron in the st-layer
-  stl.assignEventsToNeurons(tdv);
+  SpatioTemporalNeuron *nNeuron = NULL;
+
+  cout << "Seperating events into neuron clusters" << endl;
+
+  //seperate trainning data into neuron clusters
+  //XXX:TODO: thread, give each thread a rang of traces
+  for(auto &trace : tdv)
+  {
+    int group = trace.getClassificationGroup();
+
+    //for each event in trace
+    for(auto &event : trace)
+    {
+      //find the st-layer neuron nearest to event
+      nNeuron = stl.findNeuronNearestToEvent(event);
+
+      //assign event to st-layer neuron cluster
+      eventClusters[nNeuron].emplace(group, &event);
+    }
+  }
+
+
+  cout << "Computing class layer weights" << endl;
 
   //XXX: current
-
+  //XXX:TODO: thread, give each thread a range of clusters
   //TODO: for each class calculate the weight of each st-layer neuron
+  //for each neuron cluster
+  for(auto &cluster : eventClusters)
+  {
+    unordered_multimap<int, Complex> clusterGainMap;
+
+    //calculate the potential weight for each event in cluster
+    for(auto &event : cluster.second)
+      clusterGainMap.emplace(event.first, (cluster.first)->computeGain(*(event.second)));
+
+    //TODO: for each class neuron determine max weight,
+    // ignore weights form events belonging to this class
+    //for each clss neuron
+    for(auto &neuron : neurons)
+    {
+      Complex maxGain(0,0);
+
+      for(auto &gain : clusterGainMap)
+      {
+        //if gain is not from event in this class
+        if(gain.first != neuron.getClassGroup())
+        {
+          if(gain.second.amplitude > maxGain.amplitude)
+            maxGain.amplitude = gain.second.amplitude;
+
+          //TODO: repeat for gain phase
+        }
+      }
+      //TODO: assign weight to neuron class link
+      //wights[cluster.first] = maxGain;
+    }
+
+  }
+
   //for(auto &neuron : neurons)
     //neuron.computeWeights(stl);
 
-  //TODO: collect garbage
+  //TODO: collect garbage?
 
   end = chrono::system_clock::now();
   chrono::duration<double> elapsed_seconds = end-start;
