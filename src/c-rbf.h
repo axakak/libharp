@@ -27,10 +27,10 @@ class SpatioTemporalNeuron
 {
 public:
   SpatioTemporalNeuron(double X, double Y, double Z, double Time)
-    :weight(X, Y, Z, Time), error(0){}
+    :weight(X, Y, Z, Time), error(0), index(0){}
 
   SpatioTemporalNeuron(const Event& w)
-    :weight(w), error(0){}
+    :weight(w), error(0), index(0){}
 
   //accessor/mutator methods
   void setWeight(const Event& event);
@@ -99,18 +99,19 @@ private:
 class ClassNeuron
 {
 public:
+  ClassNeuron(int cGroup):classGroup(cGroup){}
+
   void computeGain(const SpatioTemporalLayer& stl);
   const Complex& getGain() const;
-  int getClassGroup() const {return classGroup;}
+
+  //training methods
+  void computeWeight(const SpatioTemporalNeuron* stn, unordered_multimap<int, Complex> cgm);
 
 private:
   double omega(double x, double w);
 
-  //training methods
-  void computeWeights(SpatioTemporalLayer& stl);
-
   /* Vector of N weights, one for each ST neuron */
-  vector<Complex> weights;
+  unordered_map<const SpatioTemporalNeuron*, Complex> weights;
   Complex gain;
   int classGroup;
 };
@@ -125,7 +126,7 @@ public:
   ClassNeuron& operator[](size_t pos);
 
 private:
-  vector<ClassNeuron> neurons;//TODO: change to map?
+  vector<ClassNeuron> neurons;
 };
 
 

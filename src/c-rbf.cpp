@@ -7,6 +7,7 @@
 #include <iostream>
 #include <iomanip>
 #include <chrono>
+#include <unordered_set>
 
 //constexpr int g_num_threads = 4;
 
@@ -37,11 +38,12 @@ Complex SpatioTemporalNeuron::computeGain(const Event& event) const
 double SpatioTemporalNeuron::computeDistance(const Event& event) const
 {
   //TODO: revaluate the correctness of this method, consolidate with compute gain
-  Event q = event - weight;
+  double x = event.x-weight.x,
+         y = event.y-weight.y,
+         z = event.z-weight.z,
+         time = (event.time-weight.time)/g_pi;
 
-  q.time /= g_pi;
-
-  return ((q.x*q.x) + (q.y*q.y) + (q.z*q.z) + (q.time*q.time));
+  return ((x*x) + (y*y) + (z*z) + (time*time));
 }
 
 
@@ -49,8 +51,8 @@ void SpatioTemporalNeuron::incramentEdgeAges()
 {
   for(auto &edge : edges)
   {
-    ++edge.second;
-    ++edge.first->edges[this];
+    ++(edge.second);
+    ++((edge.first)->edges[this]);
   }
 }
 
@@ -103,7 +105,7 @@ void SpatioTemporalNeuron::neighbourWithLargestError(const SpatioTemporalNeuron*
 
   for(auto &edge : edges)
   {
-    if(edge.first->error > stNeuron->error)
+    if((edge.first)->error > stNeuron->error)
     {
       stNeuron = edge.first;
     }
@@ -241,7 +243,7 @@ void SpatioTemporalLayer::train(TraceData& td)
       if(!(time%350000))
         file << endl << exportNeuronsYamlString();
 
-      //Determine the neuron q with max accumulated error
+      //find the neuron q with max accumulated error
       for(auto &neuron : neurons)
       {
         if(neuron.getError() > neuronS1->getError())
@@ -399,18 +401,33 @@ double ClassNeuron::omega(double x, double w)
 }
 
 
-void ClassNeuron::computeWeights(SpatioTemporalLayer& stLayer)
+void ClassNeuron::computeWeight(const SpatioTemporalNeuron* stn, unordered_multimap<int, Complex> cgm)
 {
-  /*
-  //TODO: for each neuron in the stLayer
-  for(auto &stNeuron : stLayer)
-  { //TODO: for each event clustered around stNeuron
-    for(auto &event : stNeuron)
-    {
+  Complex maxGain(0,0);
+  //int eventClassGroup;
 
+  //weight is determined by using the event in the current st-neuron cluster
+  //which produces the largest st-neuron gain.
+  //Weight amplitude and phase are determined independently
+
+  for(auto &eventGain : cgm)
+  {
+    //if gain is not from event in this class
+    if(eventGain.first != classGroup)
+    {
+      if(eventGain.second.amplitude > maxGain.amplitude)
+        maxGain.amplitude = eventGain.second.amplitude;
+
+      //TODO: find max for gain phase
     }
+    //else maxGain is 0,0
   }
-  */
+
+  //compute weight amplitude from max gain. 1/sqrt(-ln(0.95)) = 4.4153964427018
+  maxGain.amplitude = 1-exp(-4.4153964427018 * maxGain.amplitude);
+
+  //assign weight to neuron class link
+  weights[stn] = maxGain;
 }
 
 
@@ -424,18 +441,26 @@ void ClassLayer::train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv)
   chrono::time_point<chrono::system_clock> start, end;
   start = chrono::system_clock::now();
 
-  //TODO: Count the number of classes, if only one class weights are zero
-  //countClasses(tdv);
+  //add class neuron for each class in the trainning data
+  unordered_set<int> classSet;
 
-  //seperate training data into N sets, one for each neuron in the st-layer
-  SpatioTemporalNeuron *nNeuron = NULL;
+  //scan all traces to create class set
+  for(auto &trace : tdv)
+    classSet.insert(trace.getClassificationGroup());
+
+  //create neuron for each class in set
+  for(auto &classGroup : classSet)
+    neurons.emplace_back(classGroup);
+
+  cout << "Classifications detected: " << classSet.size() << endl;
 
   cout << "Seperating events into neuron clusters" << endl;
 
-  //seperate trainning data into neuron clusters
   //XXX:TODO: thread, give each thread a rang of traces
+  //seperate trainning data into N clusters, one for each st-layer neuron
   for(auto &trace : tdv)
   {
+    SpatioTemporalNeuron *nNeuron = NULL;
     int group = trace.getClassificationGroup();
 
     //for each event in trace
@@ -449,55 +474,31 @@ void ClassLayer::train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv)
     }
   }
 
-
   cout << "Computing class layer weights" << endl;
 
-  //XXX: current
   //XXX:TODO: thread, give each thread a range of clusters
-  //TODO: for each class calculate the weight of each st-layer neuron
-  //for each neuron cluster
+  //for each st-neuron cluster
   for(auto &cluster : eventClusters)
   {
+    const SpatioTemporalNeuron* stNeuron = cluster.first;
     unordered_multimap<int, Complex> clusterGainMap;
 
-    //calculate the potential weight for each event in cluster
+    //compute the gain for each event in cluster
     for(auto &event : cluster.second)
-      clusterGainMap.emplace(event.first, (cluster.first)->computeGain(*(event.second)));
+      clusterGainMap.emplace(event.first, stNeuron->computeGain(*(event.second)));
 
-    //TODO: for each class neuron determine max weight,
-    // ignore weights form events belonging to this class
-    //for each clss neuron
+    //for each class neuron determine weight for this st-neuron from gains
     for(auto &neuron : neurons)
-    {
-      Complex maxGain(0,0);
-
-      for(auto &gain : clusterGainMap)
-      {
-        //if gain is not from event in this class
-        if(gain.first != neuron.getClassGroup())
-        {
-          if(gain.second.amplitude > maxGain.amplitude)
-            maxGain.amplitude = gain.second.amplitude;
-
-          //TODO: repeat for gain phase
-        }
-      }
-      //TODO: assign weight to neuron class link
-      //wights[cluster.first] = maxGain;
-    }
-
+      neuron.computeWeight(stNeuron, clusterGainMap);
   }
-
-  //for(auto &neuron : neurons)
-    //neuron.computeWeights(stl);
-
-  //TODO: collect garbage?
 
   end = chrono::system_clock::now();
   chrono::duration<double> elapsed_seconds = end-start;
 
   cout << "Class layer training completed in "
        << elapsed_seconds.count() << "s" << endl;
+
+  //XXX: current
 }
 
 
