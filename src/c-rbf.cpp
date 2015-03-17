@@ -227,12 +227,8 @@ void SpatioTemporalLayer::train(TraceData& td)
     //neurons having no emanating edges, remove them as well.
     neuronS1->disconnectOld(50);
 
-    //TODO: try: neurons.remove_if([](SpatioTemporalNeuron n){ return n.noEdges(); });
-    for(auto it = neurons.begin(); it != neurons.end(); ++it)
-    {
-      if(it->noEdges())
-        neurons.erase(it);
-    }
+    //remove neurons with no emanating edges
+    neurons.remove_if([](SpatioTemporalNeuron& n){ return n.noEdges(); });
 
     //step 8: If the number of input signals selected is a multiple of lam,
     //insert new neuron
@@ -348,7 +344,7 @@ std::pair<SpatioTemporalNeuron*, SpatioTemporalNeuron*>
       distance2 = distance1;
       distance1 = newDistance;
     }
-    else if(newDistance < distance2)
+    else if(newDistance < distance2 && n1 != &neuron)
     {
       n2 = &neuron;
       distance2 = newDistance;
