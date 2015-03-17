@@ -196,27 +196,16 @@ void TraceData::insertEvents(TraceData& td)
 
 YAML::Emitter& operator<< (YAML::Emitter& out, const Event& v)
 {
-  //yaml-cpp does not support fixed floating-point formatting,
-  //osrtingstream is only used for formatting.
-  //TODO: replace with faster formatting procedure. -ak
+  //yaml-cpp doesn't support fixed floating-point output(i.e no trailing zeros),
+  //so output is jagged //TODO: implement fixed point formatting when avaiable.
 
-  ostringstream s;
-  s.precision(4);
-  s.setf(ios_base::fixed, ios_base::floatfield);
-
-  out << YAML::Flow << YAML::BeginSeq;
-  s << v.x;
-  out << s.str();
-  s.str("");
-  s << v.y;
-  out << s.str();
-  s.str("");
-  s << v.z;
-  out << s.str();
-  s.str("");
-  s << v.time;
-  out << s.str();
-  out << YAML::EndSeq;
+  out << YAML::Flow
+      << YAML::BeginSeq
+      << YAML::Precision(8) << v.x
+      << YAML::Precision(8) << v.y
+      << YAML::Precision(8) << v.z
+      << YAML::Precision(8) << v.time
+      << YAML::EndSeq;
 
   return out;
 }
