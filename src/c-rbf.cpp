@@ -86,16 +86,22 @@ void SpatioTemporalNeuron::disconnect(SpatioTemporalNeuron* stNeuron)
 }
 
 
-void SpatioTemporalNeuron::disconnectOld(int maxAge)
+bool SpatioTemporalNeuron::disconnectOld(int maxAge)
 {
+  bool triggered = false;
+
   for(auto &edge : edges)
   {
     if(edge.second > maxAge)
     {
       edge.first->edges.erase(this);
       edges.erase(edge.first);
+
+      triggered = true;
     }
   }
+
+  return triggered;
 }
 
 
@@ -225,10 +231,10 @@ void SpatioTemporalLayer::train(TraceData& td)
 
     //step 7: Remove edges with an age larger than a_max. If this results in
     //neurons having no emanating edges, remove them as well.
-    neuronS1->disconnectOld(50);
-
-    //remove neurons with no emanating edges
-    neurons.remove_if([](SpatioTemporalNeuron& n){ return n.noEdges(); });
+    //TODO: find a way to check only the neurons that where disconected
+    //temp solution: only check all neurons if an edge was disconnected
+    if(neuronS1->disconnectOld(50))//remove neurons with no emanating edges
+      neurons.remove_if([](SpatioTemporalNeuron& n){ return n.noEdges(); });
 
     //step 8: If the number of input signals selected is a multiple of lam,
     //insert new neuron

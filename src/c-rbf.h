@@ -52,7 +52,7 @@ public:
   void adapt(const Event& event);
   void connect(SpatioTemporalNeuron* stNeuron);
   void disconnect(SpatioTemporalNeuron* stNeuron);
-  void disconnectOld(int maxAge);
+  bool disconnectOld(int maxAge);
   void neighbourWithLargestError(const SpatioTemporalNeuron* stNeuron);
   bool noEdges() const;
 
