@@ -203,6 +203,7 @@ void SpatioTemporalLayer::train(TraceData& td)
 
   // setup random number generation
   std::random_device rd;
+  std::mt19937 randGen(rd());
   std::uniform_int_distribution<int> tdDist(0,td.size());
 
   //STEP 0: Initilize 2 neurons at random positions
@@ -211,7 +212,7 @@ void SpatioTemporalLayer::train(TraceData& td)
   do
   {
     //STEP 1: Select an input signal z from training data
-    tdIndex = tdDist(rd);
+    tdIndex = tdDist(randGen);
 
     //STEP 2: Find the 2 nearest neurons, S1 and S2, to the input signal
     std::tie(neuronS1, neuronS2) = findNeuronsNearestToEvent(td[tdIndex]);
