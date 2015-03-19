@@ -73,7 +73,7 @@ public:
   void exportNeuronsYamlFile(const string& fileName);
 
   void evaluate(const Event& event);
-  void train(TraceData& td);
+  void train(vector<TraceData>& td);
   void initRandomNeurons(int count);
 
   SpatioTemporalNeuron* findNeuronNearestToEvent(const Event& event);
@@ -148,9 +148,6 @@ public:
 
   void train(const string& traceFileList);
   void exportYamlFile(const string& traceFile);
-  void exportCsvFile(const string& tracesFile) const;
-  void loadTraceFileList(const string& traceFileList);
-  void exportTracesYamlFile(const string& tracesFile) const;
   void loadCRBFNeuralNetworkFile(const string& crbfFile);
 
 private:
@@ -158,8 +155,6 @@ private:
 
   /* Input */
   TraceData trace;
-
-  vector<TraceData> traces;
 
   /* Neural Network Layers */
   SpatioTemporalLayer stLayer;

@@ -185,14 +185,19 @@ void SpatioTemporalLayer::evaluate(const Event& event)
 }
 
 
-void SpatioTemporalLayer::train(TraceData& td)
+void SpatioTemporalLayer::train(vector<TraceData>& tdv)
 {
   cout << "\x1B[36m==>\x1B[0m " << "Training spatio-temporal"
        << " layer using growing neural-gas algorithm" << endl;
 
+  TraceData td;
   unsigned int time = 0;
   int tdIndex = 0;
   SpatioTemporalNeuron *neuronS1 = NULL, *neuronS2 = NULL;
+
+  // consolidate traces
+  for(auto &t : tdv)
+    td.insertEvents(t);
 
   ofstream file("spatioTemporalTrain.yaml");
   file << "%YAML 1.2";
@@ -598,22 +603,20 @@ void CRBFNeuralNetwork::train(const string& traceFileList)
 {
   cout << "\x1B[35m==>\x1B[0m " << "Training neural network" << endl;
 
+  vector<TraceData> traces;
+
   // load all traces into trace for network training
-  loadTraceFileList(traceFileList);
+  TraceData::loadTraceDataList(traceFileList, traces);
 
   // normalize trace data
   for(auto &t : traces)
     t.normalizeEvents();
 
   // export normalized trace data
-  exportTracesYamlFile("normalizedTrainingData.yaml");
-
-  // consolidate traces//TODO: move into stLayer::train()?
-  for(auto &t : traces)
-    trace.insertEvents(t);
+  TraceData::exportTracesYamlFile("normalizedTrainingData.yaml", traces);
 
   // train Spatio Temporal Layer
-  stLayer.train(trace);
+  stLayer.train(traces);
 
   //TODO:train Class Layer
   cLayer.train(stLayer,traces);
@@ -632,59 +635,6 @@ void CRBFNeuralNetwork::exportYamlFile(const string& nnFile)
        << cLayer.exportYamlString();// export class neurons
 
   file.close();
-}
-
-
-void CRBFNeuralNetwork::exportTracesYamlFile(const string& fileName) const
-{
-  cout << "Exporting trace data to " << fileName << endl;
-
-  ofstream file(fileName);
-  file << "%YAML 1.2";
-
-  for(auto &trace : traces)
-    file << endl << trace.exportYamlString();
-
-  file.close();
-}
-
-
-void CRBFNeuralNetwork::exportCsvFile(const string& tracesFile) const
-{
-  ofstream csvfile(tracesFile);
-
-  csvfile << "x,y,z,time" << endl;
-
-  for(auto &trace : traces)
-    csvfile << trace.exportCsvString();
-
-  csvfile.close();
-}
-
-
-void CRBFNeuralNetwork::loadTraceFileList(const string& traceFileList)
-{
-  cout << "\x1B[36m==>\x1B[0m "
-       <<  "Loading traces from " << traceFileList << endl;
-
-  ifstream fileList(traceFileList);
-  string traceFile;
-  int eventCount = 0;
-
-  // for each file in list
-  while(getline(fileList, traceFile))
-  {
-    cout << "Loading trace " << traceFile << endl;
-    traces.emplace_back(traceFile);
-    eventCount += traces.back().size();
-  }
-
-  cout << "Loading complete... " << traces.size() << " traces containing "
-       << eventCount << " events" << endl;
-  //TODO: check all trace data is from the same pattern
-  //TODO: create classification group list
-
-  fileList.close();
 }
 
 

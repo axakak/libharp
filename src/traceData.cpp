@@ -220,3 +220,42 @@ ostream& operator<< (ostream& stream, Event& e)
 
   return stream;
 }
+
+
+void TraceData::loadTraceDataList(const string& tdFileList, vector<TraceData>& tdv)
+{
+  cout << "\x1B[36m==>\x1B[0m "
+       <<  "Loading traces from " << tdFileList << endl;
+
+  ifstream fileList(tdFileList);
+  string traceFile;
+  int eventCount = 0;
+
+  // for each file in list
+  while(getline(fileList, traceFile))
+  {
+    cout << "Loading trace " << traceFile << endl;
+    tdv.emplace_back(traceFile);
+    eventCount += tdv.back().size();
+  }
+
+  cout << "Loading complete... " << tdv.size() << " traces containing "
+       << eventCount << " total events" << endl;
+
+  fileList.close();
+}
+
+void TraceData::exportTracesYamlFile(const string& fileName, vector<TraceData>& tdv)
+{
+  cout << "Exporting " << tdv.size() << " traces to " << fileName;
+
+  ofstream file(fileName);
+  file << "%YAML 1.2";
+
+  for(auto &trace : tdv)
+    file << endl << trace.exportYamlString();
+
+  file.close();
+
+  cout << "\x1B[32m\tComplete\x1B[0m" << endl;
+}

@@ -111,6 +111,11 @@ public:
   void shuffleEvents();
   void insertEvents(TraceData& td);
 
+  //static methods
+  //TODO: templetize to accept any stl container able to use range_for?
+  static void loadTraceDataList(const string& fileList, vector<TraceData>& tdv);
+  static void exportTracesYamlFile(const string& fileName, vector<TraceData>& tdv);
+
 private:
   void findMinMaxBounds();
 
