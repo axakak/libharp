@@ -12,9 +12,11 @@
 //constexpr int g_num_threads = 4;
 
 
-/************************************************************
+/*******************************************************************************
  * Spatio-temporal Objects
- ***********************************************************/
+ ******************************************************************************/
+
+/* SpatioTemporalNeuron *******************************************************/
 
 Complex SpatioTemporalNeuron::computeGain(const Event& event) const
 {
@@ -127,13 +129,13 @@ void SpatioTemporalNeuron::exportConnectionsYaml(YAML::Emitter& e)
          << YAML::BeginSeq << index << edge.first->index << YAML::EndSeq;
 }
 
+/* SpatioTemporalLayer ********************************************************/
 
-string SpatioTemporalLayer::exportNeuronsYamlString()
+string SpatioTemporalLayer::exportYamlString()
 {
   YAML::Emitter out;
 
-  out << YAML::BeginDoc
-      << YAML::BeginMap
+  out << YAML::BeginMap
       << YAML::Key << "spatio-temporal-neuron-weights"
       << YAML::Value << YAML::BeginSeq
       << YAML::Flow
@@ -168,7 +170,7 @@ void SpatioTemporalLayer::exportNeuronsYamlFile(const string& fileName)
 
   ofstream file(fileName);
 
-  file << "%YAML 1.2" << endl << exportNeuronsYamlString();
+  file << "%YAML 1.2" << endl << "---" << exportYamlString();
 
   file.close();
 }
@@ -244,7 +246,7 @@ void SpatioTemporalLayer::train(TraceData& td)
       cout << "\x1B[1K\x1B[40D" << "nc:" << neurons.size() <<  "  t:" << time;
 
       if(!(time%350000))
-        file << endl << exportNeuronsYamlString();
+        file << endl << "---" << endl << exportYamlString();
 
       //find the neuron q with max accumulated error
       for(auto &neuron : neurons)
@@ -287,7 +289,7 @@ void SpatioTemporalLayer::train(TraceData& td)
   end = chrono::system_clock::now();
   chrono::duration<double> elapsed_seconds = end-start;
 
-  file << endl << exportNeuronsYamlString();
+  file << endl << "---" << endl << exportYamlString();
   file.close();
 
   cout << endl << "Spatio-temporal training completed in "
@@ -362,9 +364,9 @@ std::pair<SpatioTemporalNeuron*, SpatioTemporalNeuron*>
 }
 
 
-/************************************************************
+/*******************************************************************************
  * Class Objects
- ***********************************************************/
+ ******************************************************************************/
 
 void ClassNeuron::computeGain(const SpatioTemporalLayer& stl)
 {
@@ -433,6 +435,25 @@ void ClassNeuron::computeWeight(const SpatioTemporalNeuron* stn, unordered_multi
   weights[stn] = maxGain;
 }
 
+
+void ClassNeuron::exportWeightsYaml(YAML::Emitter& e)
+{
+  e << YAML::BeginMap
+    << YAML::Key << "class-group" << YAML::Value << classGroup
+    << YAML::Key << "weights"
+    << YAML::Value << YAML::BeginSeq
+    << YAML::Flow
+    << YAML::BeginSeq << "amplitude" << "phase" << YAML::EndSeq;
+
+    for(auto &weight : weights)
+      e << YAML::Flow << YAML::BeginSeq
+        << weight.second.amplitude << weight.second.phase << YAML::EndSeq;
+
+  e << YAML::EndSeq
+    << YAML::EndMap;
+}
+
+/* ClassLayer *****************************************************************/
 
 //XXX: Current top level method, not complete...
 void ClassLayer::train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv)
@@ -513,6 +534,26 @@ void ClassLayer::evaluate(const SpatioTemporalLayer& stl)
 }
 
 
+string ClassLayer::exportYamlString()
+{
+  YAML::Emitter out;
+
+  out << YAML::BeginMap
+      << YAML::Key << "class-layer"
+      << YAML::Value << YAML::BeginMap
+      << YAML::Key << "class-neurons"
+      << YAML::Value << YAML::BeginSeq;
+
+      for(auto &neuron : neurons)
+        neuron.exportWeightsYaml(out);
+
+  out << YAML::EndSeq
+      << YAML::EndMap
+      << YAML::EndMap;
+
+  return out.c_str();
+}
+
 /************************************************************
  *  Network Objects
  ***********************************************************/
@@ -567,7 +608,7 @@ void CRBFNeuralNetwork::train(const string& traceFileList)
   // export normalized trace data
   exportTracesYamlFile("normalizedTrainingData.yaml");
 
-  // consolidate traces
+  // consolidate traces//TODO: move into stLayer::train()?
   for(auto &t : traces)
     trace.insertEvents(t);
 
@@ -586,9 +627,9 @@ void CRBFNeuralNetwork::exportYamlFile(const string& nnFile)
   ofstream file(nnFile);
 
   file << "%YAML 1.2" << endl
-       << stLayer.exportNeuronsYamlString();// export spatio temporal neurons
-
-  //TODO: export class neurons
+       << "---" << endl
+       << stLayer.exportYamlString() << endl// export st-neurons
+       << cLayer.exportYamlString();// export class neurons
 
   file.close();
 }

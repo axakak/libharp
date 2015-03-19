@@ -69,7 +69,7 @@ private:
 class SpatioTemporalLayer
 {
 public:
-  string exportNeuronsYamlString();
+  string exportYamlString();
   void exportNeuronsYamlFile(const string& fileName);
 
   void evaluate(const Event& event);
@@ -104,6 +104,8 @@ public:
   void computeGain(const SpatioTemporalLayer& stl);
   const Complex& getGain() const;
 
+  void exportWeightsYaml(YAML::Emitter& e);
+
   //training methods
   void computeWeight(const SpatioTemporalNeuron* stn, unordered_multimap<int, Complex> cgm);
 
@@ -122,6 +124,7 @@ class ClassLayer
 public:
   void train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv);
   void evaluate(const SpatioTemporalLayer& stl);
+  string exportYamlString();
 
   ClassNeuron& operator[](size_t pos);
 
