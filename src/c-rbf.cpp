@@ -88,13 +88,13 @@ void SpatioTemporalNeuron::disconnect(SpatioTemporalNeuron* stNeuron)
 }
 
 
-bool SpatioTemporalNeuron::disconnectOld(int maxAge)
+bool SpatioTemporalNeuron::disconnectOld(int aMax)
 {
   bool triggered = false;
 
   for(auto &edge : edges)
   {
-    if(edge.second > maxAge)
+    if(edge.second > aMax)
     {
       edge.first->edges.erase(this);
       edges.erase(edge.first);
@@ -171,12 +171,10 @@ void SpatioTemporalLayer::exportNeuronsYamlFile(const string& fileName)
   ofstream file(fileName);
 
   file << "%YAML 1.2" << endl << "---" << exportYamlString();
-
   file.close();
 }
 
 
-// calculate the gain of each neuron for a given event.
 void SpatioTemporalLayer::evaluate(const Event& event)
 {
   //for each neuron evaluate event gain
@@ -185,19 +183,10 @@ void SpatioTemporalLayer::evaluate(const Event& event)
 }
 
 
-void SpatioTemporalLayer::train(vector<TraceData>& tdv)
+void SpatioTemporalLayer::train(vector<TraceData>& tdv, int ageMax, int insertionInterval, int reportCount)
 {
   cout << "\x1B[36m==>\x1B[0m " << "Training spatio-temporal"
        << " layer using growing neural-gas algorithm" << endl;
-
-  TraceData td;
-  unsigned int time = 0;
-  int tdIndex = 0;
-  SpatioTemporalNeuron *neuronS1 = NULL, *neuronS2 = NULL;
-
-  // consolidate traces
-  for(auto &t : tdv)
-    td.insertEvents(t);
 
   ofstream file("spatioTemporalTrain.yaml");
   file << "%YAML 1.2";
@@ -205,29 +194,45 @@ void SpatioTemporalLayer::train(vector<TraceData>& tdv)
   chrono::time_point<chrono::system_clock> start, end;
   start = chrono::system_clock::now();
 
+  TraceData td;
+
+  // consolidate traces
+  for(auto &t : tdv)
+    td.insertEvents(t);
+
   // randomly shuffle trace data
   td.shuffleEvents();
 
   // setup random number generation
   std::random_device rd;
   std::mt19937 randGen(rd());
-  std::uniform_int_distribution<int> tdDist(0,td.size());
+  std::uniform_int_distribution<int> tdDistrobution(0,td.size());
 
+  unsigned int time = 0, maxTime, reportInterval;
+  int tdIndex = 0;
+  SpatioTemporalNeuron *neuronS1 = NULL, *neuronS2 = NULL;
+
+  // align maxTime and reportInterval with insertionInterval
+  maxTime = int(100*td.size()/insertionInterval);
+  reportInterval = int(maxTime/(reportCount-2)) * insertionInterval;
+  maxTime *= insertionInterval;
+
+  //steps correspond to B. Fritzke, A Growing Neural Gas Network... (1995)
   //STEP 0: Initilize 2 neurons at random positions
   initRandomNeurons(2);
 
   do
   {
     //STEP 1: Select an input signal z from training data
-    tdIndex = tdDist(randGen);
+    tdIndex = tdDistrobution(randGen);
 
     //STEP 2: Find the 2 nearest neurons, S1 and S2, to the input signal
     std::tie(neuronS1, neuronS2) = findNeuronsNearestToEvent(td[tdIndex]);
 
-    //step 3: Increment the age of all the edges emanating from S1
+    //STEP 3: Increment the age of all the edges emanating from S1
     neuronS1->incramentEdgeAges();
 
-    //step 4: Add the squared distance between the input signal and S1 to S1 error
+    //STEP 4: Add squared distance between the input signal and S1, to S1 error
     neuronS1->accumulateError(neuronS1->computeDistance(td[tdIndex]));
 
     //step 5: Move S1 and its connected neighbors towards z
@@ -241,16 +246,16 @@ void SpatioTemporalLayer::train(vector<TraceData>& tdv)
     //neurons having no emanating edges, remove them as well.
     //TODO: find a way to check only the neurons that where disconected
     //temp solution: only check all neurons if an edge was disconnected
-    if(neuronS1->disconnectOld(50))//remove neurons with no emanating edges
+    if(neuronS1->disconnectOld(ageMax))//remove neurons with no emanating edges
       neurons.remove_if([](SpatioTemporalNeuron& n){ return n.noEdges(); });
 
     //step 8: If the number of input signals selected is a multiple of lam,
     //insert new neuron
-    if(!(time%60000))
+    if(!(time%insertionInterval))
     {
       cout << "\x1B[1K\x1B[40D" << "nc:" << neurons.size() <<  "  t:" << time;
 
-      if(!(time%350000))
+      if(!(time%reportInterval))
         file << endl << "---" << endl << exportYamlString();
 
       //find the neuron q with max accumulated error
@@ -263,7 +268,7 @@ void SpatioTemporalLayer::train(vector<TraceData>& tdv)
       cout << "  e:" << setprecision(4) << neuronS1->getError();
       cout.flush();
 
-      //find the neighbour f of q with the largest error
+      //find adjacent neuron f of q with the largest error
       neuronS1->neighbourWithLargestError(neuronS2);
 
       //insert new neuron r halfway between q and it's neighbour f with the largest error
@@ -277,7 +282,7 @@ void SpatioTemporalLayer::train(vector<TraceData>& tdv)
       neuronS1->disconnect(neuronS2);
 
       //decrease the error of q and f by multiplying them with a constant _alpha
-      neuronS1->scaleError(0.5f);
+      neuronS1->scaleError(0.5f);//TODO: make _alpha an argument
       neuronS2->scaleError(0.5f);
 
       //initialize the error of r with the new error of q
@@ -287,14 +292,17 @@ void SpatioTemporalLayer::train(vector<TraceData>& tdv)
 
     //step 9: Decrease all the error variables by multiplying them with a constant d
     for(auto &neuron : neurons)
-      neuron.scaleError(0.995f);
+      neuron.scaleError(0.995f);//TODO: make d and argument
 
-  }while(time < 16020000);//TODO: select better stopping criterion
+  }while(time < maxTime);//TODO: select better stopping criterion
 
   end = chrono::system_clock::now();
   chrono::duration<double> elapsed_seconds = end-start;
 
-  file << endl << "---" << endl << exportYamlString();
+  file << endl
+       << "---" << endl
+       << exportYamlString();
+
   file.close();
 
   cout << endl << "Spatio-temporal training completed in "
@@ -411,32 +419,37 @@ double ClassNeuron::omega(double x, double w)
 }
 
 
-void ClassNeuron::computeWeight(const SpatioTemporalNeuron* stn, unordered_multimap<int, Complex> cgm)
+void ClassNeuron::computeWeight(const SpatioTemporalNeuron* stn, unordered_multimap<int, Complex> gainMap)
 {
   Complex maxGain(0,0);
-  //int eventClassGroup;
-
   //weight is determined by using the event in the current st-neuron cluster
   //which produces the largest st-neuron gain.
   //Weight amplitude and phase are determined independently
 
-  for(auto &eventGain : cgm)
+  for(auto &eventGain : gainMap)
   {
     //if gain is not from event in this class
     if(eventGain.first != classGroup)
     {
+      //find max for gain amplitude in cluster
       if(eventGain.second.amplitude > maxGain.amplitude)
         maxGain.amplitude = eventGain.second.amplitude;
 
-      //TODO: find max for gain phase
-    }
-    //else maxGain is 0,0
+      //find max for gain phase in cluster
+      if(eventGain.second.phase > maxGain.phase)
+        maxGain.phase = eventGain.second.phase;
+    }//else maxGain is 0,0
   }
 
   //compute weight amplitude from max gain. 1/sqrt(-ln(0.95)) = 4.4153964427018
-  maxGain.amplitude = 1-exp(-4.4153964427018 * maxGain.amplitude);
+  if(maxGain.amplitude)
+    maxGain.amplitude = 1-exp(-4.4153964427018 * maxGain.amplitude);
 
-  //assign weight to neuron class link
+  //compute weight phase from max gain. (1/pi)/sqrt(-ln(0.95)) = 1.40546433913273
+  if(maxGain.phase)
+    maxGain.phase = copysign(1-exp(-1.40546433913273 * abs(maxGain.phase)), maxGain.phase);
+
+  //assign class neuron weight linkend to stn
   weights[stn] = maxGain;
 }
 
@@ -496,6 +509,7 @@ void ClassLayer::train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv)
     for(auto &event : trace)
     {
       //find the st-layer neuron nearest to event
+      //TODO: nearest neuron should be determind by neuron gain not squared distance
       nNeuron = stl.findNeuronNearestToEvent(event);
 
       //assign event to st-layer neuron cluster
@@ -526,8 +540,6 @@ void ClassLayer::train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv)
 
   cout << "Class layer training completed in "
        << elapsed_seconds.count() << "s" << endl;
-
-  //XXX: current
 }
 
 
@@ -616,7 +628,7 @@ void CRBFNeuralNetwork::train(const string& traceFileList)
   TraceData::exportTracesYamlFile("normalizedTrainingData.yaml", traces);
 
   // train Spatio Temporal Layer
-  stLayer.train(traces);
+  stLayer.train(traces, 50, 60000, 10);
 
   //TODO:train Class Layer
   cLayer.train(stLayer,traces);
@@ -657,4 +669,25 @@ YAML::Emitter& operator<< (YAML::Emitter& out, const SpatioTemporalNeuron& v)
   out << v.getWeight();
 
   return out;
+}
+
+
+namespace YAML
+{
+  template<>
+  struct convert<SpatioTemporalNeuron>
+  {
+    static Node encode(const SpatioTemporalNeuron& rhs)
+    {
+      Node node;
+      node.push_back(rhs.getWeight());
+      return node;
+    }
+
+    static bool decode(const Node& node, SpatioTemporalNeuron& rhs)
+    {
+      rhs.setWeight(node.as<Event>());
+      return true;
+    }
+  };
 }

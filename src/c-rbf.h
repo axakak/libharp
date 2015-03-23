@@ -19,9 +19,10 @@ struct Complex
   double amplitude, phase;
 };
 
-/************************************************************
+
+/*******************************************************************************
  * Spatio-temporal Objects
- ***********************************************************/
+ ******************************************************************************/
 
 class SpatioTemporalNeuron
 {
@@ -52,7 +53,7 @@ public:
   void adapt(const Event& event);
   void connect(SpatioTemporalNeuron* stNeuron);
   void disconnect(SpatioTemporalNeuron* stNeuron);
-  bool disconnectOld(int maxAge);
+  bool disconnectOld(int aMax);
   void neighbourWithLargestError(const SpatioTemporalNeuron* stNeuron);
   bool noEdges() const;
 
@@ -73,7 +74,7 @@ public:
   void exportNeuronsYamlFile(const string& fileName);
 
   void evaluate(const Event& event);
-  void train(vector<TraceData>& td);
+  void train(vector<TraceData>& tdv, int ageMax, int insertionInterval, int reportCount);
   void initRandomNeurons(int count);
 
   SpatioTemporalNeuron* findNeuronNearestToEvent(const Event& event);
@@ -92,9 +93,9 @@ private:
 };
 
 
-/************************************************************
+/*******************************************************************************
  * Class Objects
- ***********************************************************/
+ ******************************************************************************/
 
 class ClassNeuron
 {
@@ -133,9 +134,9 @@ private:
 };
 
 
-/************************************************************
+/*******************************************************************************
  *  Network Objects
- ***********************************************************/
+ ******************************************************************************/
 
 class CRBFNeuralNetwork
 {
@@ -165,9 +166,9 @@ private:
 };
 
 
-/************************************************************
+/*******************************************************************************
  *  Inline Methods
- ***********************************************************/
+ ******************************************************************************/
 
 inline void SpatioTemporalNeuron::setWeight(const Event& event)
 {
@@ -240,30 +241,10 @@ inline ClassNeuron& ClassLayer::operator[](size_t pos)
 }
 
 
-/************************************************************
+/*******************************************************************************
  * YAML parser/emitter
- ***********************************************************/
+ ******************************************************************************/
 
 YAML::Emitter& operator<< (YAML::Emitter& out, const SpatioTemporalNeuron& v);
-
-namespace YAML
-{
-  template<>
-  struct convert<SpatioTemporalNeuron>
-  {
-    static Node encode(const SpatioTemporalNeuron& rhs)
-    {
-      Node node;
-      node.push_back(rhs.getWeight());
-      return node;
-    }
-
-    static bool decode(const Node& node, SpatioTemporalNeuron& rhs)
-    {
-      rhs.setWeight(node.as<Event>());
-      return true;
-    }
-  };
-}
 
 #endif //C_RBF_H
