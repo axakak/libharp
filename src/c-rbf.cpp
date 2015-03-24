@@ -20,20 +20,20 @@
 
 Complex SpatioTemporalNeuron::computeGain(const Event& event) const
 {
-  Event q = event - weight;
+  double x = event.x-weight.x,
+         y = event.y-weight.y,
+         z = event.z-weight.z;
 
-  double a = sqrt( ((q.x*q.x)+(q.y*q.y)+(q.z*q.z))/3 );
-  double p = q.time;
+  double amp = sqrt( ( (x*x)+(y*y)+(z*z) )/3 );
+  double ph = event.time-weight.time;
 
-  // constrain to <-pi;pi>
-  /*
-  if(gain.phase > g_pi)
-    gain.phase -= 2*g_pi;
-  else if(gain.phase < -g_pi)
-    gain.phase += 2*g_pi;
-  */
+  // constrain phase to <-pi;pi>
+  if(ph > g_pi)
+    ph -= 2*g_pi;
+  else if(ph < -g_pi)
+    ph += 2*g_pi;
 
-  return Complex(a, p);
+  return Complex(amp, ph);
 }
 
 
