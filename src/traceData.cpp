@@ -80,7 +80,6 @@ string TraceData::exportYamlString() const
         << YAML::Key << "group" << YAML::Value << classificationGroup
       << YAML::EndMap
       << YAML::Key << "workspace" << YAML::Value << workspace
-      << YAML::Key << "workspace" << YAML::Value << workspace
       << YAML::Key << "coordinate-space" << YAML::Value << coordinateSpace
       << YAML::Key << "total-time" << YAML::Value << totalTime
       << YAML::Key << "events"
