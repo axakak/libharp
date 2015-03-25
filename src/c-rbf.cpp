@@ -253,8 +253,6 @@ void SpatioTemporalLayer::train(vector<TraceData>& tdv, int ageMax, int insertio
     //insert new neuron
     if(!(time%insertionInterval))
     {
-      cout << "\x1B[1K\x1B[40D" << "nc:" << neurons.size() <<  "  t:" << time;
-
       if(!(time%reportInterval))
         file << endl << "---" << endl << exportYamlString();
 
@@ -264,9 +262,6 @@ void SpatioTemporalLayer::train(vector<TraceData>& tdv, int ageMax, int insertio
         if(neuron.getError() > neuronS1->getError())
           neuronS1 = &neuron;
       }
-
-      cout << "  e:" << setprecision(4) << neuronS1->getError();
-      cout.flush();
 
       //find adjacent neuron f of q with the largest error
       neuronS1->neighbourWithLargestError(neuronS2);
@@ -287,6 +282,10 @@ void SpatioTemporalLayer::train(vector<TraceData>& tdv, int ageMax, int insertio
 
       //initialize the error of r with the new error of q
       neurons.back().setError(neuronS1->getError());
+
+      cout << "\x1B[1K\x1B[40D" << "nc:" << neurons.size() << "  t:" << time
+           << "  e:" << setprecision(4) << neuronS1->getError();
+      cout.flush();
     }
     ++time;
 
@@ -436,7 +435,7 @@ void ClassNeuron::computeWeight(const SpatioTemporalNeuron* stn, unordered_multi
         maxGain.amplitude = eventGain.second.amplitude;
 
       //find max for gain phase in cluster
-      if(eventGain.second.phase > maxGain.phase)
+      if(abs(eventGain.second.phase) > abs(maxGain.phase))
         maxGain.phase = eventGain.second.phase;
     }//else maxGain is 0,0
   }
@@ -447,7 +446,7 @@ void ClassNeuron::computeWeight(const SpatioTemporalNeuron* stn, unordered_multi
 
   //compute weight phase from max gain. (1/pi)/sqrt(-ln(0.95)) = 1.40546433913273
   if(maxGain.phase)
-    maxGain.phase = copysign(1-exp(-1.40546433913273 * abs(maxGain.phase)), maxGain.phase);
+    maxGain.phase = copysign((1-exp(-1.40546433913273 * abs(maxGain.phase)))*g_pi, maxGain.phase);
 
   //assign class neuron weight linkend to stn
   weights[stn] = maxGain;
@@ -516,7 +515,9 @@ void ClassLayer::train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv)
       eventClusters[nNeuron].emplace(group, &event);
     }
   }
+  //FIXME: eventClusters should always contain all st-neurons
 
+  cout << "Cluster count " << eventClusters.size() << endl;
   cout << "Computing class layer weights" << endl;
 
   //XXX:TODO: thread, give each thread a range of clusters
