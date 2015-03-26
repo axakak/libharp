@@ -324,6 +324,32 @@ void SpatioTemporalLayer::initRandomNeurons(int count)
 
 
 SpatioTemporalNeuron*
+ SpatioTemporalLayer::findNeuronWithLeastGain(const Event& event)
+ {
+   SpatioTemporalNeuron *n1 = &(*(neurons.begin()));
+   Complex gain1 = n1->computeGain(event),
+           newGain;
+   double gainMag1 = hypot(gain1.amplitude, gain1.phase/g_pi),
+          newGainMag;
+
+
+   for(auto &neuron : neurons)
+   {
+     newGain = neuron.computeGain(event);
+     newGainMag = hypot(newGain.amplitude, newGain.phase/g_pi);
+
+     if(newGainMag < gainMag1)
+     {
+       n1 = &neuron;
+       gainMag1 = newGainMag;
+     }
+   }
+
+   return n1;
+ }
+
+
+SpatioTemporalNeuron*
  SpatioTemporalLayer::findNeuronNearestToEvent(const Event& event)
 {
   SpatioTemporalNeuron *n1 = &(*(neurons.begin()));
@@ -507,9 +533,8 @@ void ClassLayer::train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv)
     //for each event in trace
     for(auto &event : trace)
     {
-      //find the st-layer neuron nearest to event
-      //TODO: nearest neuron should be determind by neuron gain not squared distance
-      nNeuron = stl.findNeuronNearestToEvent(event);
+      //find the st-layer neuron with the least amout of gain from event
+      nNeuron = stl.findNeuronWithLeastGain(event);
 
       //assign event to st-layer neuron cluster
       eventClusters[nNeuron].emplace(group, &event);
@@ -631,7 +656,7 @@ void CRBFNeuralNetwork::train(const string& traceFileList)
   // train Spatio Temporal Layer
   stLayer.train(traces, 50, 60000, 10);
 
-  //TODO:train Class Layer
+  // train Class Layer
   cLayer.train(stLayer,traces);
 }
 

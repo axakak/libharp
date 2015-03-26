@@ -77,6 +77,7 @@ public:
   void train(vector<TraceData>& tdv, int ageMax, int insertionInterval, int reportCount);
   void initRandomNeurons(int count);
 
+  SpatioTemporalNeuron* findNeuronWithLeastGain(const Event& event);
   SpatioTemporalNeuron* findNeuronNearestToEvent(const Event& event);
   std::pair<SpatioTemporalNeuron*, SpatioTemporalNeuron*>
    findNeuronsNearestToEvent(const Event& event);
