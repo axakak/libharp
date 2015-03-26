@@ -19,12 +19,13 @@ void TraceData::loadYamlFile(const string& traceFile)
 {
   YAML::Node doc = YAML::LoadFile(traceFile);
 
-  fileName = traceFile;
+  //save filename for reference
+  filename = traceFile;
 
   events.clear();
 
   //load metadata
-  //TODO: implement data validation
+  //TODO: implement data validation?
   patientID = doc["patient-id"].as<std::string>();
   date = doc["date"].as<std::string>();
   location = doc["location"].as<std::string>();
@@ -244,11 +245,11 @@ void TraceData::loadTraceDataList(const string& tdFileList, vector<TraceData>& t
   fileList.close();
 }
 
-void TraceData::exportTracesYamlFile(const string& fileName, vector<TraceData>& tdv)
+void TraceData::exportTracesYamlFile(const string& exportFilename, vector<TraceData>& tdv)
 {
-  cout << "Exporting " << tdv.size() << " traces to " << fileName;
+  cout << "Exporting " << tdv.size() << " traces to " << exportFilename;
 
-  ofstream file(fileName);
+  ofstream file(exportFilename);
   file << "%YAML 1.2";
 
   for(auto &trace : tdv)
