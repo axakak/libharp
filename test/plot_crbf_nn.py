@@ -13,7 +13,7 @@ parser.add_argument('crbfFilename', metavar='[filename]')
 args = parser.parse_args()
 
 #setup 3D subplot
-x,y = plt.figaspect(.75)*1.5
+x,y = plt.figaspect(.65)*1.5
 fig = plt.figure(figsize=(x,y), tight_layout=True)
 ax = fig.add_subplot(111, projection='3d')
 
@@ -70,17 +70,18 @@ lines = ax.add_collection(lc)
 
 cWeights = yamlDoc['class-layer']['class-neurons'][1]['weights'][1:]
 cSizes = [(cs[0]*20)**3+20 for cs in cWeights]
-cColor = np.array([cc[1] for cc in cWeights])
+cColor = [cc[1] for cc in cWeights]
 
 print(len(stnw))
 print(len(cSizes))
 print(len(cColor))
 
-
 nScatter = ax.scatter3D(stnw[:,0],stnw[:,1],stnw[:,zidx], s=cSizes,
                         linewidth=0.1, edgecolor='gray',
                         c=cColor, cmap=plt.cm.bwr, vmin=-np.pi, vmax=np.pi,
                         marker='o', depthshade=False)
+
+fig.colorbar(nScatter, ax=ax, shrink=0.7)
 
 #legend = ax.legend([tdScatter, (lines, nScatter)] ,['Training Data','Spatio-temporal Neurons'], fontsize='medium', loc='lower right')
 #legend.get_frame().set_edgecolor('darkgray')
