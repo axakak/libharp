@@ -71,7 +71,7 @@ class SpatioTemporalLayer
 {
 public:
   string exportYamlString();
-  void exportNeuronsYamlFile(const string& fileName);
+  void exportNeuronsYamlFile(const string& filename);
 
   void evaluate(const Event& event);
   void train(vector<TraceData>& tdv, int ageMax, int insertionInterval, int reportCount);

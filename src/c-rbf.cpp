@@ -164,11 +164,11 @@ string SpatioTemporalLayer::exportYamlString()
 }
 
 
-void SpatioTemporalLayer::exportNeuronsYamlFile(const string& fileName)
+void SpatioTemporalLayer::exportNeuronsYamlFile(const string& filename)
 {
-  cout << "Exporting spatio-temporal neurons to " << fileName << endl;
+  cout << "Exporting spatio-temporal neurons to " << filename << endl;
 
-  ofstream file(fileName);
+  ofstream file(filename);
 
   file << "%YAML 1.2" << endl << "---" << exportYamlString();
   file.close();
@@ -681,9 +681,18 @@ void CRBFNeuralNetwork::loadCRBFNeuralNetworkFile(const string& crbfFile)
   cout << "\x1B[36m==>\x1B[0m "
        <<  "Loading C-RBF neural network from " << crbfFile << endl;
 
-  ifstream cFile(crbfFile);
+  //TODO: load st-layer
+  stLayer.loadFile(crbfFile);
+  {
+    YAML::Node doc = YAML::LoadFile(crbfFile);
+    const YAML::Node& stnwNode = doc["spatio-temporal-neuron-weights"];
 
-  //TODO: method not complete...
+    for(size_t i = 1; i < stnwNode.size(); i++)
+      events.push_back(stnwNode[i].as<Event>());
+  }
+
+  //TODO: load class-layer
+  cLayer.loadFile(crbfFile);
 }
 
 /************************************************************
