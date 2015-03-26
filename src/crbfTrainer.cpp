@@ -1,5 +1,5 @@
 #include "c-rbf.h"
-#include <string>
+//#include <string>
 
 using namespace std;
 
@@ -10,7 +10,7 @@ int main(int argc, char** argv)
 
   neuralNet.train(argv[1]);
 
-  neuralNet.exportYamlFile("crbfNeuralNet.yaml");
+  neuralNet.exportYamlFile(argv[2]);
 
   return 0;
 }
