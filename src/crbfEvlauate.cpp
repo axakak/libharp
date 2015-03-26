@@ -1,5 +1,4 @@
 #include "c-rbf.h"
-//#include <string>
 
 using namespace std;
 
