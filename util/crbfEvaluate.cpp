@@ -9,7 +9,7 @@ int main(int argc, char** argv)
 
   neuralNet.loadCRBFNeuralNetworkFile(argv[1]);
 
-  neuralNet.evaluateTrace(arv[2]);
+  neuralNet.evaluateTrace(argv[2]);
 
   return 0;
 }

@@ -76,6 +76,7 @@ public:
   void evaluate(const Event& event);
   void train(vector<TraceData>& tdv, int ageMax, int insertionInterval, int reportCount);
   void initRandomNeurons(int count);
+  void loadFile(const string& filename){}
 
   SpatioTemporalNeuron* findNeuronWithLeastGain(const Event& event);
   SpatioTemporalNeuron* findNeuronNearestToEvent(const Event& event);
@@ -126,6 +127,7 @@ class ClassLayer
 public:
   void train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv);
   void evaluate(const SpatioTemporalLayer& stl);
+  void loadFile(const string& filename){}
   string exportYamlString();
 
   ClassNeuron& operator[](size_t pos);
@@ -146,7 +148,7 @@ public:
 
   CRBFNeuralNetwork(const CRBFNeuralNetwork& orig);
 
-  void evaluateTrace();
+  void evaluateTrace(const string& traceFile);
 
   void train(const string& traceFileList);
   void exportYamlFile(const string& traceFile);

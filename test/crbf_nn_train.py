@@ -29,18 +29,12 @@ origDir = os.getcwd()
 rootDir = os.path.dirname(os.path.dirname(origDir))
 
 if args.train:
-    crbfTrain = os.path.join(rootDir,'bin/crbfTrainer')
-
-    # check that build is up to date
-    makeCMD = "make -q --directory='{}'".format(rootDir);
-    print(makeCMD)
-    if sub.call(makeCMD, shell=True):
-        print('\x1B[33mwarning:\x1B[0m build not up to date')
+    harpTrain = os.path.join(rootDir,'build/util/harptrain')
 
     # run c-rbf training
-    crbfTrainCMD = "'{}' {} {}".format(crbfTrain, args.train, args.output)
-    print(crbfTrainCMD)
-    sub.call(crbfTrainCMD,shell=True,stdout=sys.stdout)
+    harpTrainCMD = "'{}' {} {}".format(harpTrain, args.train, args.output)
+    print(harpTrainCMD)
+    sub.call(harpTrainCMD,shell=True,stdout=sys.stdout)
 
 
 if args.plot:

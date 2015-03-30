@@ -601,13 +601,15 @@ string ClassLayer::exportYamlString()
  *  Network Objects
  ***********************************************************/
 
-void CRBFNeuralNetwork::evaluateTrace()
+void CRBFNeuralNetwork::evaluateTrace(const string& traceFile)
 {
+  //TODO: make thread safe
+  /*
   if(trace.empty())
   {
     cerr << "error: trace is null, cannot evaluate" << endl;
     exit(1);
-  }
+  }*/
 
   //clear cumulativeErrors
   cumulativeErrors.clear();
@@ -683,13 +685,13 @@ void CRBFNeuralNetwork::loadCRBFNeuralNetworkFile(const string& crbfFile)
 
   //TODO: load st-layer
   stLayer.loadFile(crbfFile);
-  {
+  /*{
     YAML::Node doc = YAML::LoadFile(crbfFile);
     const YAML::Node& stnwNode = doc["spatio-temporal-neuron-weights"];
 
     for(size_t i = 1; i < stnwNode.size(); i++)
       events.push_back(stnwNode[i].as<Event>());
-  }
+  }*/
 
   //TODO: load class-layer
   cLayer.loadFile(crbfFile);
