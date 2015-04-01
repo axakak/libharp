@@ -14,7 +14,7 @@ from numpy import *
 
 parser = argparse.ArgumentParser(description="To test crbf training")
 parser.add_argument('-t','--train', action='store', default='', metavar='<ifile>', help='Train neural network using trace list <ifile>')
-parser.add_argument('-o','--output', action='store', default='', metavar='<ofile>', help='Export trained nueral network to <ofile>')
+parser.add_argument('-o','--output', action='store', default='crbfNeuralNet.yaml', metavar='<ofile>', help='Export trained nueral network to <ofile>')
 parser.add_argument('-p','--plot', action='store_true', help='Plot data from previous training')
 parser.add_argument('-z','--zdata', action='store_true', help='Plot z spacial data on the z-axis')
 parser.add_argument('--gif', action='store_true')
