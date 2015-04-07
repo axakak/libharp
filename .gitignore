@@ -6,3 +6,7 @@ build*/
 # test
 #################
 test/*traces/
+
+crbfNeuralNet.yaml
+normalizedTrainingData.yaml
+spatioTemporalTrain.yaml
