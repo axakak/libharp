@@ -152,7 +152,7 @@ string SpatioTemporalLayer::exportYamlString()
       << YAML::Key << "spatio-temporal-neuron-edges"
       << YAML::Value << YAML::BeginSeq
       << YAML::Flow
-      << YAML::BeginSeq << "v1" << "v2" << YAML::EndSeq;
+      << YAML::BeginSeq << "neuron-index" << "neuron-index" << YAML::EndSeq;
 
   for(auto &neuron : neurons)
     neuron.exportConnectionsYaml(out);
@@ -218,7 +218,7 @@ void SpatioTemporalLayer::train(vector<TraceData>& tdv, int ageMax, int insertio
   maxTime *= insertionInterval;
 
   //steps correspond to B. Fritzke, A Growing Neural Gas Network... (1995)
-  //STEP 0: Initilize 2 neurons at random positions
+  //STEP 0: Initialize 2 neurons at random positions
   initRandomNeurons(2);
 
   do
@@ -486,11 +486,18 @@ void ClassNeuron::exportWeightsYaml(YAML::Emitter& e)
     << YAML::Key << "weights"
     << YAML::Value << YAML::BeginSeq
     << YAML::Flow
-    << YAML::BeginSeq << "amplitude" << "phase" << YAML::EndSeq;
+    << YAML::BeginSeq
+    << "st-neuron-index" << "amplitude" << "phase"
+    << YAML::EndSeq;
 
     for(auto &weight : weights)
-      e << YAML::Flow << YAML::BeginSeq
-        << weight.second.amplitude << weight.second.phase << YAML::EndSeq;
+    {
+      e << YAML::Flow
+        << YAML::BeginSeq
+        << (weight.first)->getIndex()
+        << weight.second.amplitude << weight.second.phase
+        << YAML::EndSeq;
+    }
 
   e << YAML::EndSeq
     << YAML::EndMap;
@@ -519,9 +526,8 @@ void ClassLayer::train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv)
   for(auto &classGroup : classSet)
     neurons.emplace_back(classGroup);
 
-  cout << "Classifications detected: " << classSet.size() << endl;
-
-  cout << "Seperating events into neuron clusters" << endl;
+  cout << "Classifications detected: " << classSet.size() << endl
+       << "Seperating events into neuron clusters" << endl;
 
   //XXX:TODO: thread, give each thread a rang of traces
   //seperate trainning data into N clusters, one for each st-layer neuron
@@ -540,7 +546,8 @@ void ClassLayer::train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv)
       eventClusters[nNeuron].emplace(group, &event);
     }
   }
-  //FIXME: eventClusters should always contain all st-neurons
+  //FIXME: eventClusters should always contain all st-neurons?
+  // delete st-neurons not clustered to?
 
   cout << "Cluster count " << eventClusters.size() << endl;
   cout << "Computing class layer weights" << endl;
@@ -577,6 +584,24 @@ void ClassLayer::evaluate(const SpatioTemporalLayer& stl)
 }
 
 
+void ClassLayer::loadFile(const string& filename)
+{
+  YAML::Node doc = YAML::LoadFile(filename);
+  const YAML::Node& clnNode = doc["class-layer"]["class-neurons"];
+
+  for(size_t i = 0; i < clnNode.size(); i++)
+  {
+    //add class layer neuron for group
+    neurons.emplace_back(clnNode[i]["class-group"].as<int>());
+
+    //TODO: load weights into added neuron
+    //const YAML::Node& cwNode = clnNode[i]["weights"];
+    //for(size_t k = 1; k < cwNode.size(); k++)
+      //neurons.push_back(stnwNode[i].as<Event>());
+  }
+}
+
+
 string ClassLayer::exportYamlString()
 {
   YAML::Emitter out;
@@ -603,39 +628,46 @@ string ClassLayer::exportYamlString()
 
 void CRBFNeuralNetwork::evaluateTrace(const string& traceFile)
 {
-  //TODO: make thread safe
-  /*
-  if(trace.empty())
-  {
-    cerr << "error: trace is null, cannot evaluate" << endl;
-    exit(1);
-  }*/
+  cout << "\x1B[35m==>\x1B[0m "
+       << "Evaluating trace from " << traceFile << endl;
 
-  //clear cumulativeErrors
-  cumulativeErrors.clear();
+  //TODO: make thread safe
+  TraceData trace(traceFile);
+  vector<double> cumulativeErrors;
+
+  trace.normalizeEvents();
+
+  //for each class initialize cumulativeErrors
+  for(int i = 0; i < cLayer.size(); i++)
+    cumulativeErrors.emplace_back(0);
 
   //for each event in trace evaluate event
-  for(int i = 0; i < trace.size(); i++)
+  for(auto &event : trace)
   {
+    //TODO: for thread safty neuron gain should be layer output not a property
     //evaluate spatio-temporal layer for given event
-    stLayer.evaluate(trace[i]);
+    stLayer.evaluate(event);
 
     //evaluate class layer
     cLayer.evaluate(stLayer);
 
     //for each class add error to cumulativeErrors
-    for(int k = 0; k < cumulativeErrors.size(); k++)
-      cumulativeErrors[k] += computeErrorIncrement(cLayer[k].getGain());
+    for(int k = 0; k < cLayer.size(); k++)
+      cumulativeErrors[k] += computeErrorIncrement(cLayer[k].getGain(), trace.size());
   }
+  //TODO: change to formal return value
+  for(int i = 0; i < cumulativeErrors.size(); i++)
+    cout << "Class " << cLayer[i].getClassGroup() << " error: " << cumulativeErrors[i] << endl;
+
 }
 
 
-double CRBFNeuralNetwork::computeErrorIncrement(const Complex& gain)
+double CRBFNeuralNetwork::computeErrorIncrement(const Complex& gain, int tdSize) const
 {
   double Ys = 1, // spacial priority
          Yt = 1; // temporal priority
 
-  return (1/(trace.size()*hypot(Ys,Yt))) * hypot(Ys*gain.amplitude, Yt*gain.phase/g_pi);
+  return (1/(tdSize*hypot(Ys,Yt))) * hypot(Ys*gain.amplitude, Yt*gain.phase/g_pi);
 }
 
 

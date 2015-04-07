@@ -41,6 +41,7 @@ public:
   const Event& getWeight() const;
   const Complex& getGain() const;
   double getError() const;
+  int getIndex() const {return index;}
 
   //evaluation methods
   Complex computeGain(const Event& event) const;
@@ -106,6 +107,7 @@ public:
 
   void computeGain(const SpatioTemporalLayer& stl);
   const Complex& getGain() const;
+  int getClassGroup() const {return classGroup;}
 
   void exportWeightsYaml(YAML::Emitter& e);
 
@@ -117,8 +119,8 @@ private:
 
   /* Vector of N weights, one for each ST neuron */
   unordered_map<const SpatioTemporalNeuron*, Complex> weights;
-  Complex gain;
   int classGroup;
+  Complex gain;
 };
 
 
@@ -127,10 +129,11 @@ class ClassLayer
 public:
   void train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv);
   void evaluate(const SpatioTemporalLayer& stl);
-  void loadFile(const string& filename){}
+  void loadFile(const string& filename);
   string exportYamlString();
 
   ClassNeuron& operator[](size_t pos);
+  size_t size() const {return neurons.size();}
 
 private:
   vector<ClassNeuron> neurons;
@@ -144,7 +147,7 @@ private:
 class CRBFNeuralNetwork
 {
 public:
-  CRBFNeuralNetwork(): trace(){}
+  CRBFNeuralNetwork(){};
 
   CRBFNeuralNetwork(const CRBFNeuralNetwork& orig);
 
@@ -155,17 +158,11 @@ public:
   void loadCRBFNeuralNetworkFile(const string& crbfFile);
 
 private:
-  double computeErrorIncrement(const Complex& gain);
-
-  /* Input */
-  TraceData trace;
+  double computeErrorIncrement(const Complex& gain, int tdSize) const;
 
   /* Neural Network Layers */
   SpatioTemporalLayer stLayer;
   ClassLayer cLayer;
-
-  /* Output */
-  vector<double> cumulativeErrors;
 };
 
 
