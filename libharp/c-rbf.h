@@ -77,7 +77,7 @@ public:
   void evaluate(const Event& event);
   void train(vector<TraceData>& tdv, int ageMax, int insertionInterval, int reportCount);
   void initRandomNeurons(int count);
-  void loadFile(const string& filename){}
+  void loadFile(const string& filename);
 
   SpatioTemporalNeuron* findNeuronWithLeastGain(const Event& event);
   SpatioTemporalNeuron* findNeuronNearestToEvent(const Event& event);

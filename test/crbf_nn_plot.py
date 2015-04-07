@@ -70,13 +70,15 @@ lines = ax.add_collection(lc)
 
 cWeights = yamlDoc['class-layer']['class-neurons'][0]['weights'][1:]
 
-
+#TODO: create new check for c-weight st-neuron inequality
+'''
 if (len(stnw) != len(cWeights)):
     print('\x1B[31merror\x1B[0m: neuron count mismatch ({}:{})'.format(len(stnw),len(cWeights)))
     exit()
+'''
 
-cSizes = [0] * len(cWeights)
-cColor = [0] * len(cWeights)
+cSizes = [20] * len(stnw)
+cColor = [0] * len(stnw)
 
 for cw in cWeights:
     cSizes[cw[0]] = (cw[1]*20)**3+20

@@ -164,6 +164,16 @@ string SpatioTemporalLayer::exportYamlString()
 }
 
 
+void SpatioTemporalLayer::loadFile(const string& filename)
+{
+  YAML::Node doc = YAML::LoadFile(filename);
+  const YAML::Node& stnwNode = doc["spatio-temporal-neuron-weights"];
+
+  for(size_t i = 1; i < stnwNode.size(); i++)
+    neurons.push_back(stnwNode[i].as<Event>());
+}
+
+
 void SpatioTemporalLayer::exportNeuronsYamlFile(const string& filename)
 {
   cout << "Exporting spatio-temporal neurons to " << filename << endl;
@@ -492,11 +502,15 @@ void ClassNeuron::exportWeightsYaml(YAML::Emitter& e)
 
     for(auto &weight : weights)
     {
-      e << YAML::Flow
-        << YAML::BeginSeq
-        << (weight.first)->getIndex()
-        << weight.second.amplitude << weight.second.phase
-        << YAML::EndSeq;
+      //only export nonzero weights
+      if(weight.second.amplitude || weight.second.phase)
+      {
+        e << YAML::Flow
+          << YAML::BeginSeq
+          << (weight.first)->getIndex()
+          << weight.second.amplitude << weight.second.phase
+          << YAML::EndSeq;
+      }
     }
 
   e << YAML::EndSeq
@@ -505,7 +519,6 @@ void ClassNeuron::exportWeightsYaml(YAML::Emitter& e)
 
 /* ClassLayer *****************************************************************/
 
-//XXX: Current top level method, not complete...
 void ClassLayer::train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv)
 {
   unordered_map<const SpatioTemporalNeuron* ,unordered_multimap<int, const Event*> > eventClusters;
@@ -717,13 +730,6 @@ void CRBFNeuralNetwork::loadCRBFNeuralNetworkFile(const string& crbfFile)
 
   //TODO: load st-layer
   stLayer.loadFile(crbfFile);
-  /*{
-    YAML::Node doc = YAML::LoadFile(crbfFile);
-    const YAML::Node& stnwNode = doc["spatio-temporal-neuron-weights"];
-
-    for(size_t i = 1; i < stnwNode.size(); i++)
-      events.push_back(stnwNode[i].as<Event>());
-  }*/
 
   //TODO: load class-layer
   cLayer.loadFile(crbfFile);
