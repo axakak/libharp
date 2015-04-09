@@ -39,7 +39,6 @@ public:
   void setError(double err);
   void setIndex(int i);
   const Event& getWeight() const;
-  const Complex& getGain() const;
   double getError() const;
   int getIndex() const {return index;}
 
@@ -74,7 +73,7 @@ public:
   string exportYamlString();
   void exportNeuronsYamlFile(const string& filename);
 
-  void evaluate(const Event& event);
+  vector<Complex> evaluate(const Event& event) const;
   void train(vector<TraceData>& tdv, int ageMax, int insertionInterval, int reportCount);
   void initRandomNeurons(int count);
   void loadFile(const string& filename);
@@ -105,22 +104,26 @@ class ClassNeuron
 public:
   ClassNeuron(int cGroup):classGroup(cGroup){}
 
-  void computeGain(const SpatioTemporalLayer& stl);
-  const Complex& getGain() const;
-  int getClassGroup() const {return classGroup;}
 
-  void exportWeightsYaml(YAML::Emitter& e);
+  //evaluation methods
+  Complex computeGain(const vector<Complex>& stlGains) const;
 
   //training methods
   void computeWeight(const SpatioTemporalNeuron* stn, unordered_multimap<int, Complex> cgm);
 
+  //expot methods
+  void exportWeightsYaml(YAML::Emitter& e) const;
+
+  //accessor methods
+  int getClassGroup() const {return classGroup;}
+
 private:
-  double omega(double x, double w);
+  double omega(double x, double w) const;
+
+  int classGroup;
 
   /* Vector of N weights, one for each ST neuron */
-  unordered_map<const SpatioTemporalNeuron*, Complex> weights;
-  int classGroup;
-  Complex gain;
+  vector<Complex> weights;
 };
 
 
@@ -128,7 +131,7 @@ class ClassLayer
 {
 public:
   void train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv);
-  void evaluate(const SpatioTemporalLayer& stl);
+  vector<Complex> evaluate(const vector<Complex>& stLayerGains);
   void loadFile(const string& filename);
   string exportYamlString();
 
@@ -149,9 +152,7 @@ class CRBFNeuralNetwork
 public:
   CRBFNeuralNetwork(){};
 
-  CRBFNeuralNetwork(const CRBFNeuralNetwork& orig);
-
-  void evaluateTrace(const string& traceFile);
+  vector<double> evaluateTrace(const string& traceFile);
 
   void train(const string& traceFileList);
   void exportYamlFile(const string& traceFile);
@@ -211,10 +212,12 @@ inline double SpatioTemporalNeuron::getError() const
   return error;
 }
 
+
 inline bool SpatioTemporalNeuron::noEdges() const
 {
   return edges.empty();
 }
+
 
 /*
 inline SpatioTemporalNeuron& SpatioTemporalLayer::operator[](size_t pos)
@@ -229,10 +232,6 @@ inline const SpatioTemporalNeuron& SpatioTemporalLayer::operator[](size_t pos) c
 }
 */
 
-inline const Complex& ClassNeuron::getGain() const
-{
-  return gain;
-}
 
 
 inline ClassNeuron& ClassLayer::operator[](size_t pos)

@@ -170,7 +170,7 @@ void SpatioTemporalLayer::loadFile(const string& filename)
   const YAML::Node& stnwNode = doc["spatio-temporal-neuron-weights"];
 
   for(size_t i = 1; i < stnwNode.size(); i++)
-    neurons.push_back(stnwNode[i].as<Event>());
+    neurons.emplace_back(stnwNode[i].as<Event>());
 }
 
 
@@ -185,11 +185,14 @@ void SpatioTemporalLayer::exportNeuronsYamlFile(const string& filename)
 }
 
 
-void SpatioTemporalLayer::evaluate(const Event& event)
 {
+  vector<Complex> gains;
+
   //for each neuron evaluate event gain
   for(auto &neuron : neurons)
-    neuron.computeGain(event);
+    gains.emplace_back(neuron.computeGain(event));
+
+  return gains;
 }
 
 
@@ -416,37 +419,39 @@ std::pair<SpatioTemporalNeuron*, SpatioTemporalNeuron*>
  * Class Objects
  ******************************************************************************/
 
-void ClassNeuron::computeGain(const SpatioTemporalLayer& stl)
+Complex ClassNeuron::computeGain(const vector<Complex>& stlGains) const
 {
-  int kBMU = 0;
+  size_t k_BMU;
   double minMagnitude = 2,
          magnitude = 0,
          re = 0,
          im = 0;
+  Complex gain;
 
   // find the nearest neuron (best matching unit) from the ST layer
   // and compute the gain for that neuron
-  for(int k = 0; k < weights.size(); k++)
+  for(size_t k = 0; k < stlGains.size(); k++)
   {
-    //TODO: replace stl [] with somthing that works with lists
-    //re = omega(stl[k].getGain().amplitude, weights[k].amplitude);
-    //im = omega(stl[k].getGain().phase, weights[k].phase/g_pi);
+    re = omega(stlGains[k].amplitude, weights[k].amplitude);
+    im = omega(stlGains[k].phase, weights[k].phase/g_pi);
     magnitude = hypot(re,im);
 
     if(magnitude < minMagnitude)
     {
       minMagnitude = magnitude;
-      kBMU = k;
+      k_BMU = k;
       gain.amplitude = re;
       gain.phase = im;
     }
   }
 
-  //gain.phase = copysign(g_pi*gain.phase, stl[kBMU].getGain().phase);
+  gain.phase = copysign(g_pi*gain.phase, stlGains[k_BMU].phase);
+
+  return gain;
 }
 
 
-double ClassNeuron::omega(double x, double w)
+double ClassNeuron::omega(double x, double w) const
 {
   double f = x/log(1-abs(w));
 
@@ -589,11 +594,15 @@ void ClassLayer::train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv)
 }
 
 
-void ClassLayer::evaluate(const SpatioTemporalLayer& stl)
+vector<Complex> ClassLayer::evaluate(const vector<Complex>& stLayerGains)
 {
+  vector<Complex> gains;
+
   // compute the gain for each class neuron
   for(auto& neuron : neurons)
-    neuron.computeGain(stl);
+    gains.emplace_back(neuron.computeGain(stLayerGains));
+
+  return gains;
 }
 
 
@@ -639,39 +648,29 @@ string ClassLayer::exportYamlString()
  *  Network Objects
  ***********************************************************/
 
-void CRBFNeuralNetwork::evaluateTrace(const string& traceFile)
+vector<double> CRBFNeuralNetwork::evaluateTrace(const string& traceFile)
 {
   cout << "\x1B[35m==>\x1B[0m "
        << "Evaluating trace from " << traceFile << endl;
 
   //TODO: make thread safe
   TraceData trace(traceFile);
-  vector<double> cumulativeErrors;
+  vector<double> cumulativeErrors(cLayer.size(), 0);
 
   trace.normalizeEvents();
-
-  //for each class initialize cumulativeErrors
-  for(int i = 0; i < cLayer.size(); i++)
-    cumulativeErrors.emplace_back(0);
 
   //for each event in trace evaluate event
   for(auto &event : trace)
   {
-    //TODO: for thread safty neuron gain should be layer output not a property
-    //evaluate spatio-temporal layer for given event
-    stLayer.evaluate(event);
-
-    //evaluate class layer
-    cLayer.evaluate(stLayer);
+    //evaluate spatio-temporal layer for given event, pass gains to class layer
+    vector<Complex> clGains = cLayer.evaluate(stLayer.evaluate(event));
 
     //for each class add error to cumulativeErrors
     for(int k = 0; k < cLayer.size(); k++)
-      cumulativeErrors[k] += computeErrorIncrement(cLayer[k].getGain(), trace.size());
+      cumulativeErrors[k] += computeErrorIncrement(clGains[k], trace.size());
   }
-  //TODO: change to formal return value
-  for(int i = 0; i < cumulativeErrors.size(); i++)
-    cout << "Class " << cLayer[i].getClassGroup() << " error: " << cumulativeErrors[i] << endl;
 
+  return cumulativeErrors;
 }
 
 
