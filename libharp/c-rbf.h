@@ -104,7 +104,6 @@ class ClassNeuron
 public:
   ClassNeuron(int cGroup):classGroup(cGroup){}
 
-
   //evaluation methods
   Complex computeGain(const vector<Complex>& stlGains) const;
 
@@ -123,7 +122,7 @@ private:
   int classGroup;
 
   /* Vector of N weights, one for each ST neuron */
-  vector<Complex> weights;
+  unordered_map<const SpatioTemporalNeuron*, Complex> weights;
 };
 
 

@@ -185,6 +185,7 @@ void SpatioTemporalLayer::exportNeuronsYamlFile(const string& filename)
 }
 
 
+vector<Complex> SpatioTemporalLayer::evaluate(const Event& event) const
 {
   vector<Complex> gains;
 
@@ -432,8 +433,8 @@ Complex ClassNeuron::computeGain(const vector<Complex>& stlGains) const
   // and compute the gain for that neuron
   for(size_t k = 0; k < stlGains.size(); k++)
   {
-    re = omega(stlGains[k].amplitude, weights[k].amplitude);
-    im = omega(stlGains[k].phase, weights[k].phase/g_pi);
+    //re = omega(stlGains[k].amplitude, weights[k].amplitude);
+    //im = omega(stlGains[k].phase, weights[k].phase/g_pi);
     magnitude = hypot(re,im);
 
     if(magnitude < minMagnitude)
@@ -445,7 +446,7 @@ Complex ClassNeuron::computeGain(const vector<Complex>& stlGains) const
     }
   }
 
-  gain.phase = copysign(g_pi*gain.phase, stlGains[k_BMU].phase);
+  //gain.phase = copysign(g_pi*gain.phase, stlGains[k_BMU].phase);
 
   return gain;
 }
@@ -494,7 +495,7 @@ void ClassNeuron::computeWeight(const SpatioTemporalNeuron* stn, unordered_multi
 }
 
 
-void ClassNeuron::exportWeightsYaml(YAML::Emitter& e)
+void ClassNeuron::exportWeightsYaml(YAML::Emitter& e) const
 {
   e << YAML::BeginMap
     << YAML::Key << "class-group" << YAML::Value << classGroup
