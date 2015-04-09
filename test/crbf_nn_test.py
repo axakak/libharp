@@ -35,8 +35,15 @@ if args.train:
     harpTrainCMD = "'{}' {} {}".format(harpTrain, args.train, args.output)
     print(harpTrainCMD)
     sub.call(harpTrainCMD,shell=True,stdout=sys.stdout)
+'''
+if args.eval:
+    harpEval = os.path.join(rootDir,'build/util/harpevaluate')
 
-
+    # run c-rbf evaluation
+    harpEvalCMD = "'{}' {} {}".format(harpTrain, args.eval)
+    print(harpEvalCMD)
+    sub.call(harpEvalCMD,shell=True,stdout=sys.stdout)
+'''
 if args.plot:
     # display results
     print('\x1B[34m==> \x1B[0m Plotting results')
