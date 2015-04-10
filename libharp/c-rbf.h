@@ -19,6 +19,7 @@ struct Complex
   double amplitude, phase;
 };
 
+//TODO: make edges a member of st-layer by creating edges object
 
 /*******************************************************************************
  * Spatio-temporal Objects

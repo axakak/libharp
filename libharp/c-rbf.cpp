@@ -340,7 +340,7 @@ void SpatioTemporalLayer::initRandomNeurons(int count)
 SpatioTemporalNeuron*
  SpatioTemporalLayer::findNeuronWithLeastGain(const Event& event)
  {
-   SpatioTemporalNeuron *n1 = &(*(neurons.begin()));
+   SpatioTemporalNeuron *n1 = &neurons.front();
    Complex gain1 = n1->computeGain(event),
            newGain;
    double gainMag1 = hypot(gain1.amplitude, gain1.phase/g_pi),
@@ -366,7 +366,7 @@ SpatioTemporalNeuron*
 SpatioTemporalNeuron*
  SpatioTemporalLayer::findNeuronNearestToEvent(const Event& event)
 {
-  SpatioTemporalNeuron *n1 = &(*(neurons.begin()));
+  SpatioTemporalNeuron *n1 = &neurons.front();
   double distance1 = n1->computeDistance(event),
          newDistance = 0;
 
@@ -388,8 +388,8 @@ SpatioTemporalNeuron*
 std::pair<SpatioTemporalNeuron*, SpatioTemporalNeuron*>
  SpatioTemporalLayer::findNeuronsNearestToEvent(const Event& event)
 {
-  SpatioTemporalNeuron *n1 = &(*(neurons.begin())),
-                       *n2 = &(*(neurons.rbegin()));
+  SpatioTemporalNeuron *n1 = &neurons.front(),
+                       *n2 = &neurons.back();
   double distance1 = n1->computeDistance(event),
          distance2 = n2->computeDistance(event),
          newDistance = 0;
