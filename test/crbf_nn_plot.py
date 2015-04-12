@@ -52,30 +52,25 @@ yamlDoc = yaml.load(yamlSream)
 #load st-neuron weights into numpy array, skip data key (index 0) by [1:]
 stnw = np.array((yamlDoc['spatio-temporal-neuron-weights'][1:]))
 
-#load st-neuron edges (neuron indexed) into numpy array, skip data key by [1:]
-stne = np.array((yamlDoc['spatio-temporal-neuron-edges'][1:]))
+#Check for neuron edges
+if 'spatio-temporal-neuron-edges' in yamlDoc:
+    #load st-neuron edges (neuron indexed) into numpy array, skip data key by [1:]
+    stne = np.array((yamlDoc['spatio-temporal-neuron-edges'][1:]))
 
-#convert edges from neuron index pairs to coordinate pairs
-edges = np.array([vstack((stnw[eidx[0]], stnw[eidx[1]])).tolist() for eidx in stne])
+    #convert edges from neuron index pairs to coordinate pairs
+    edges = np.array([vstack((stnw[eidx[0]], stnw[eidx[1]])).tolist() for eidx in stne])
 
-#build 3D line collection from
-lc = art3d.Line3DCollection([[tuple(e[0,[0,1,zidx]]), tuple(e[1,[0,1,zidx]])] for e in edges])
+    #build 3D line collection from
+    lc = art3d.Line3DCollection([[tuple(e[0,[0,1,zidx]]), tuple(e[1,[0,1,zidx]])] for e in edges])
 
-#set edge properties
-lc.set_linewidth(0.5)
-lc.set_color('silver')
+    #set edge properties
+    lc.set_linewidth(0.5)
+    lc.set_color('silver')
 
-#add neuron edges to axes
-lines = ax.add_collection(lc)
+    #add neuron edges to axes
+    lines = ax.add_collection(lc)
 
 cWeights = yamlDoc['class-layer']['class-neurons'][0]['weights'][1:]
-
-#TODO: create new check for c-weight st-neuron inequality
-'''
-if (len(stnw) != len(cWeights)):
-    print('\x1B[31merror\x1B[0m: neuron count mismatch ({}:{})'.format(len(stnw),len(cWeights)))
-    exit()
-'''
 
 cSizes = [20] * len(stnw)
 cColor = [0] * len(stnw)
