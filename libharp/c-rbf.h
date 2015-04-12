@@ -29,10 +29,10 @@ class SpatioTemporalNeuron
 {
 public:
   SpatioTemporalNeuron(double X, double Y, double Z, double Time)
-    :weight(X, Y, Z, Time), error(0), index(0){}
+    :weight(X, Y, Z, Time), index(0), error(0){}
 
-  SpatioTemporalNeuron(const Event& w)
-    :weight(w), error(0), index(0){}
+  SpatioTemporalNeuron(const Event& w, size_t idx=0)
+    :weight(w), index(idx), error(0){}
 
   //accessor/mutator methods
   void setWeight(const Event& event);
@@ -41,7 +41,7 @@ public:
   void setIndex(int i);
   const Event& getWeight() const;
   double getError() const;
-  int getIndex() const {return index;}
+  size_t getIndex() const {return index;}
 
   //evaluation methods
   Complex computeGain(const Event& event) const;
@@ -58,12 +58,20 @@ public:
   void neighbourWithLargestError(const SpatioTemporalNeuron* stNeuron);
   bool noEdges() const;
 
+  //export methods
   void exportConnectionsYaml(YAML::Emitter& e);
+
+
+  static bool less_time(const SpatioTemporalNeuron &a, const SpatioTemporalNeuron &b)
+  {
+    return a.getWeight().time < b.getWeight().time;
+  }
+
 
 private:
   Event weight;
+  size_t index;
   double error;
-  int index;
   unordered_map<SpatioTemporalNeuron*, int> edges;
 };
 
@@ -88,8 +96,11 @@ public:
   SpatioTemporalNeuron& operator[](size_t pos);
   const SpatioTemporalNeuron& operator[](size_t pos) const;
   */
+  size_t size() const {return neurons.size();}
 
 private:
+  void indexNeurons();
+
   //list container was selected for constant insert and delete times,
   //which is only important during training
   list<SpatioTemporalNeuron> neurons;
@@ -103,13 +114,17 @@ private:
 class ClassNeuron
 {
 public:
-  ClassNeuron(int cGroup):classGroup(cGroup){}
+  ClassNeuron(int cGroup, size_t stnCount)
+    :classGroup(cGroup), weights(stnCount){}
+
+  ClassNeuron(int cGroup, vector<Complex> initWeights)
+    :classGroup(cGroup), weights(initWeights){}
 
   //evaluation methods
   Complex computeGain(const vector<Complex>& stlGains) const;
 
   //training methods
-  void computeWeight(const SpatioTemporalNeuron* stn, unordered_multimap<int, Complex> cgm);
+  void computeWeight(size_t stnIdx, unordered_multimap<int, Complex> cgm);
 
   //expot methods
   void exportWeightsYaml(YAML::Emitter& e) const;
@@ -123,7 +138,7 @@ private:
   int classGroup;
 
   /* Vector of N weights, one for each ST neuron */
-  unordered_map<const SpatioTemporalNeuron*, Complex> weights;
+  vector<Complex> weights;
 };
 
 
@@ -131,7 +146,7 @@ class ClassLayer
 {
 public:
   void train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv);
-  vector<Complex> evaluate(const vector<Complex>& stLayerGains);
+  vector<Complex> evaluate(const vector<Complex>& stLayerGains) const;
   void loadFile(const string& filename);
   string exportYamlString();
 
@@ -152,7 +167,7 @@ class CRBFNeuralNetwork
 public:
   CRBFNeuralNetwork(){};
 
-  vector<double> evaluateTrace(const string& traceFile);
+  vector<double> evaluateTrace(const string& traceFile) const;
 
   void train(const string& traceFileList);
   void exportYamlFile(const string& traceFile);

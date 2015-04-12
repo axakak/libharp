@@ -24,16 +24,15 @@ Complex SpatioTemporalNeuron::computeGain(const Event& event) const
          y = event.y-weight.y,
          z = event.z-weight.z;
 
-  double amp = sqrt( ( (x*x)+(y*y)+(z*z) )/3 );
-  double ph = event.time-weight.time;
+  Complex gain(sqrt(( (x*x)+(y*y)+(z*z) )/3 ), event.time-weight.time);
 
-  // constrain phase to <-pi;pi>
-  if(ph > g_pi)
-    ph -= 2*g_pi;
-  else if(ph < -g_pi)
-    ph += 2*g_pi;
+  //reduce gain phase to <-pi;pi>
+  if(gain.phase > g_pi)
+    gain.phase -= 2*g_pi;
+  else if(gain.phase < -g_pi)
+    gain.phase += 2*g_pi;
 
-  return Complex(amp, ph);
+  return gain;
 }
 
 
@@ -141,12 +140,10 @@ string SpatioTemporalLayer::exportYamlString()
       << YAML::Flow
       << YAML::BeginSeq << "x" << "y" << "z" << "time" << YAML::EndSeq;
 
-  int i = 0;
+  indexNeurons();
+
   for(auto &neuron : neurons)
-  {
     out << neuron.getWeight();
-    neuron.setIndex(i++);
-  }
 
   out << YAML::EndSeq
       << YAML::Key << "spatio-temporal-neuron-edges"
@@ -170,7 +167,7 @@ void SpatioTemporalLayer::loadFile(const string& filename)
   const YAML::Node& stnwNode = doc["spatio-temporal-neuron-weights"];
 
   for(size_t i = 1; i < stnwNode.size(); i++)
-    neurons.emplace_back(stnwNode[i].as<Event>());
+    neurons.emplace_back(stnwNode[i].as<Event>(), i-1);
 }
 
 
@@ -187,11 +184,11 @@ void SpatioTemporalLayer::exportNeuronsYamlFile(const string& filename)
 
 vector<Complex> SpatioTemporalLayer::evaluate(const Event& event) const
 {
-  vector<Complex> gains;
+  vector<Complex> gains(neurons.size());
 
   //for each neuron evaluate event gain
   for(auto &neuron : neurons)
-    gains.emplace_back(neuron.computeGain(event));
+    gains[neuron.getIndex()] = neuron.computeGain(event);
 
   return gains;
 }
@@ -309,6 +306,10 @@ void SpatioTemporalLayer::train(vector<TraceData>& tdv, int ageMax, int insertio
 
   }while(time < maxTime);//TODO: select better stopping criterion
 
+  neurons.sort(SpatioTemporalNeuron::less_time);
+
+  indexNeurons();
+
   end = chrono::system_clock::now();
   chrono::duration<double> elapsed_seconds = end-start;
 
@@ -320,6 +321,14 @@ void SpatioTemporalLayer::train(vector<TraceData>& tdv, int ageMax, int insertio
 
   cout << endl << "Spatio-temporal training completed in "
        << elapsed_seconds.count() << "s" << endl;
+}
+
+
+void SpatioTemporalLayer::indexNeurons()
+{
+  size_t i = 0;
+  for(auto &neuron : neurons)
+    neuron.setIndex(i++);
 }
 
 
@@ -433,8 +442,8 @@ Complex ClassNeuron::computeGain(const vector<Complex>& stlGains) const
   // and compute the gain for that neuron
   for(size_t k = 0; k < stlGains.size(); k++)
   {
-    //re = omega(stlGains[k].amplitude, weights[k].amplitude);
-    //im = omega(stlGains[k].phase, weights[k].phase/g_pi);
+    re = omega(stlGains[k].amplitude, weights[k].amplitude);
+    im = omega(stlGains[k].phase, weights[k].phase/g_pi);
     magnitude = hypot(re,im);
 
     if(magnitude < minMagnitude)
@@ -446,7 +455,7 @@ Complex ClassNeuron::computeGain(const vector<Complex>& stlGains) const
     }
   }
 
-  //gain.phase = copysign(g_pi*gain.phase, stlGains[k_BMU].phase);
+  gain.phase = copysign(g_pi*gain.phase, stlGains[k_BMU].phase);
 
   return gain;
 }
@@ -460,7 +469,7 @@ double ClassNeuron::omega(double x, double w) const
 }
 
 
-void ClassNeuron::computeWeight(const SpatioTemporalNeuron* stn, unordered_multimap<int, Complex> gainMap)
+void ClassNeuron::computeWeight(size_t stnIdx, unordered_multimap<int, Complex> gainMap)
 {
   Complex maxGain(0,0);
   //weight is determined by using the event in the current st-neuron cluster
@@ -491,7 +500,7 @@ void ClassNeuron::computeWeight(const SpatioTemporalNeuron* stn, unordered_multi
     maxGain.phase = copysign((1-exp(-1.40546433913273 * abs(maxGain.phase)))*g_pi, maxGain.phase);
 
   //assign class neuron weight linkend to stn
-  weights[stn] = maxGain;
+  weights[stnIdx] = maxGain;
 }
 
 
@@ -506,15 +515,14 @@ void ClassNeuron::exportWeightsYaml(YAML::Emitter& e) const
     << "st-neuron-index" << "amplitude" << "phase"
     << YAML::EndSeq;
 
-    for(auto &weight : weights)
+    for(size_t k = 0; k < weights.size(); k++)
     {
       //only export nonzero weights
-      if(weight.second.amplitude || weight.second.phase)
+      if(weights[k].amplitude || weights[k].phase)
       {
         e << YAML::Flow
           << YAML::BeginSeq
-          << (weight.first)->getIndex()
-          << weight.second.amplitude << weight.second.phase
+          << k << weights[k].amplitude << weights[k].phase
           << YAML::EndSeq;
       }
     }
@@ -543,7 +551,7 @@ void ClassLayer::train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv)
 
   //create neuron for each class in set
   for(auto &classGroup : classSet)
-    neurons.emplace_back(classGroup);
+    neurons.emplace_back(classGroup, stl.size());
 
   cout << "Classifications detected: " << classSet.size() << endl
        << "Seperating events into neuron clusters" << endl;
@@ -575,7 +583,7 @@ void ClassLayer::train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv)
   //for each st-neuron cluster
   for(auto &cluster : eventClusters)
   {
-    const SpatioTemporalNeuron* stNeuron = cluster.first;
+    auto& stNeuron = cluster.first;
     unordered_multimap<int, Complex> clusterGainMap;
 
     //compute the gain for each event in cluster
@@ -584,7 +592,7 @@ void ClassLayer::train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv)
 
     //for each class neuron determine weight for this st-neuron from gains
     for(auto &neuron : neurons)
-      neuron.computeWeight(stNeuron, clusterGainMap);
+      neuron.computeWeight(stNeuron->getIndex(), clusterGainMap);
   }
 
   end = chrono::system_clock::now();
@@ -595,7 +603,7 @@ void ClassLayer::train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv)
 }
 
 
-vector<Complex> ClassLayer::evaluate(const vector<Complex>& stLayerGains)
+vector<Complex> ClassLayer::evaluate(const vector<Complex>& stLayerGains) const
 {
   vector<Complex> gains;
 
@@ -612,15 +620,20 @@ void ClassLayer::loadFile(const string& filename)
   YAML::Node doc = YAML::LoadFile(filename);
   const YAML::Node& clnNode = doc["class-layer"]["class-neurons"];
 
+  size_t count = doc["spatio-temporal-neuron-weights"].size() - 1;
+
   for(size_t i = 0; i < clnNode.size(); i++)
   {
-    //add class layer neuron for group
-    neurons.emplace_back(clnNode[i]["class-group"].as<int>());
+    vector<Complex> w(count);
 
-    //TODO: load weights into added neuron
-    //const YAML::Node& cwNode = clnNode[i]["weights"];
-    //for(size_t k = 1; k < cwNode.size(); k++)
-      //neurons.push_back(stnwNode[i].as<Event>());
+    const YAML::Node& cwNode = clnNode[i]["weights"];
+
+    //load weights into initialization vector
+    for(size_t k = 1; k < cwNode.size(); k++)
+      w[cwNode[k][0].as<size_t>()] = Complex(cwNode[k][1].as<double>(), cwNode[k][2].as<double>());
+
+    //add class layer neuron for group
+    neurons.emplace_back(clnNode[i]["class-group"].as<int>(), w);
   }
 }
 
@@ -649,7 +662,7 @@ string ClassLayer::exportYamlString()
  *  Network Objects
  ***********************************************************/
 
-vector<double> CRBFNeuralNetwork::evaluateTrace(const string& traceFile)
+vector<double> CRBFNeuralNetwork::evaluateTrace(const string& traceFile) const
 {
   cout << "\x1B[35m==>\x1B[0m "
        << "Evaluating trace from " << traceFile << endl;
@@ -670,6 +683,9 @@ vector<double> CRBFNeuralNetwork::evaluateTrace(const string& traceFile)
     for(int k = 0; k < cLayer.size(); k++)
       cumulativeErrors[k] += computeErrorIncrement(clGains[k], trace.size());
   }
+
+  for(auto& cError:cumulativeErrors)
+    cout << cError << endl;
 
   return cumulativeErrors;
 }
@@ -726,14 +742,15 @@ void CRBFNeuralNetwork::exportYamlFile(const string& nnFile)
 void CRBFNeuralNetwork::loadCRBFNeuralNetworkFile(const string& crbfFile)
 {
   cout << "\x1B[36m==>\x1B[0m "
-       <<  "Loading C-RBF neural network from " << crbfFile << endl;
+       <<  "Loading C-RBF neural network from "
+       << "\x1B[32m" << crbfFile << "\x1B[0m" << endl;
 
-  //TODO: load st-layer
   stLayer.loadFile(crbfFile);
-
-  //TODO: load class-layer
   cLayer.loadFile(crbfFile);
+
+  //exportYamlFile("check_" + crbfFile);
 }
+
 
 /************************************************************
  * YAML parser/emitter
