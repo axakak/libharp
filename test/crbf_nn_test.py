@@ -13,32 +13,38 @@ from mpl_toolkits.mplot3d import axes3d, art3d
 from numpy import *
 
 parser = argparse.ArgumentParser(description="To test crbf training")
-parser.add_argument('-t','--train', action='store_true', help='Train neural network without plotting results')
+parser.add_argument('-t','--train', action='store', default='', metavar='<ifile>', help='Train neural network using trace list <ifile>')
+parser.add_argument('-o','--output', action='store', default='crbfNeuralNet.yaml', metavar='<ofile>', help='Export trained nueral network to <ofile>')
 parser.add_argument('-p','--plot', action='store_true', help='Plot data from previous training')
 parser.add_argument('-z','--zdata', action='store_true', help='Plot z spacial data on the z-axis')
 parser.add_argument('--gif', action='store_true')
+parser.add_argument('--png', action='store_true')
 args = parser.parse_args()
 
-rootDir = os.path.dirname(os.getcwd())
-os.chdir(os.path.join(rootDir, 'test/stc_1_sample'))
+if not (args.train or args.plot):
+    print('no command given, please use -h for a list of options')
+    quit()
 
-if not args.plot:
-    crbfTrain = os.path.join(rootDir,'bin/crbfTrainer')
-    traceDataList = 'stc_1_list.txt'
+origDir = os.getcwd()
+rootDir = os.path.dirname(os.path.dirname(origDir))
 
-    # check that build is up to date
-    makeCMD = "make -q --directory='{}'".format(rootDir);
-    print(makeCMD)
-    if sub.call(makeCMD, shell=True):
-        print('\x1B[33mwarning:\x1B[0m build not up to date')
+if args.train:
+    harpTrain = os.path.join(rootDir,'build/util/harptrain')
 
     # run c-rbf training
-    crbfTrainCMD = "'{}' {}".format(crbfTrain, traceDataList)
-    print(crbfTrainCMD)
-    sub.call(crbfTrainCMD,shell=True,stdout=sys.stdout)
+    harpTrainCMD = "'{}' {} {}".format(harpTrain, args.train, args.output)
+    print(harpTrainCMD)
+    sub.call(harpTrainCMD,shell=True,stdout=sys.stdout)
+'''
+if args.eval:
+    harpEval = os.path.join(rootDir,'build/util/harpevaluate')
 
-
-if not args.train:
+    # run c-rbf evaluation
+    harpEvalCMD = "'{}' {} {}".format(harpTrain, args.eval)
+    print(harpEvalCMD)
+    sub.call(harpEvalCMD,shell=True,stdout=sys.stdout)
+'''
+if args.plot:
     # display results
     print('\x1B[34m==> \x1B[0m Plotting results')
 
@@ -61,17 +67,15 @@ if not args.train:
 
     if args.zdata:
         zidx = 2
+        ax.set_zlabel('z')
+        ax.set_zlim3d(0, 1)
+        ax.set_zticks([0, 0.5, 1])
     else:
         zidx = 3
-
-    if zidx == 3:
         ax.set_zlabel('time')
         ax.set_zlim(0, 2*np.pi)
         ax.set_zticks([0, np.pi, 2*np.pi])
         ax.set_zticklabels(['0', '$\pi$','2$\pi$'])
-    elif zidx == 2:
-        ax.set_zlabel('z')
-        ax.set_zlim3d(0, 1)
 
     print('Plotting normalized training data')
     #load training trace date yaml file
@@ -85,7 +89,7 @@ if not args.train:
     for yamlDoc in yaml.load_all(open('spatioTemporalTrain.yaml', 'r')):
         stnw = np.array((yamlDoc['spatio-temporal-neuron-weights'][1:]))
         stnc = np.array((yamlDoc['spatio-temporal-neuron-edges'][1:]))
-        links = np.array([vstack((stnw[cidx[0]], stnw[cidx[1]])).tolist() for cidx in stnc]) 
+        links = np.array([vstack((stnw[cidx[0]], stnw[cidx[1]])).tolist() for cidx in stnc])
         lc = art3d.Line3DCollection([[tuple(con[0,[0,1,zidx]]), tuple(con[1,[0,1,zidx]])] for con in links], lw=0.5 )
         lc.set_color('coral')
         lines = ax.add_collection(lc)
@@ -100,5 +104,9 @@ if not args.train:
 
     if args.gif:
         ani.save('neural_training.gif', writer='imagemagick');
+
+    if args.png:
+        ani.save('neural_training.png', writer='imagemagick');
+
 
     plt.show()

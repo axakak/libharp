@@ -1,43 +1,12 @@
-#################
-# tqc
-#################
-# Compiled Object files
-*.slo
-*.lo
-*.o
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-
 # Directories
-bin/*
-tmp/*
-
-# Testing results
-testing/exportTrace.txt
-
-#############
-# Mac detritus
-#############
-
-.DS_Store
-
 #################
-# vim
-#################
-*.swo
+build*/
 
 
+# test
 #################
-# testing output
-#################
+test/*traces/
+
 crbfNeuralNet.yaml
 normalizedTrainingData.yaml
 spatioTemporalTrain.yaml
-*.gif

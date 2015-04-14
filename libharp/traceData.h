@@ -40,7 +40,7 @@ struct Event
   }
 
   Event& operator+=(const Event& rhs)
-  { 
+  {
     x = x + rhs.x;
     y = y + rhs.y;
     z = z + rhs.z;
@@ -53,7 +53,7 @@ struct Event
 };
 
 
-class TraceData 
+class TraceData
 {
 public:
   //default constructor
@@ -73,6 +73,7 @@ public:
   string getLocation() const;
   string getPatternType() const;
   int getPatternLevel() const;
+  int getClassificationGroup() const;
   string getWorkspace() const;
   string getCoordinateSpace() const;
   double getTotalTime() const;
@@ -85,6 +86,7 @@ public:
   void setLocation(string);
   void setPatternType(string);
   void setPatternLevel(int);
+  void setClassificationGroup(int);
   void setWorkspace(string);
   void setCoordinateSpace(string);
   void setTotalTime(double time);
@@ -100,21 +102,31 @@ public:
   void pop_back();
   bool empty() const;
   size_t size() const;
+  vector<Event>::iterator begin();
+  vector<Event>::iterator end();
+  vector<Event>::const_iterator begin() const;
+  vector<Event>::const_iterator end() const;
 
   void normalizeEvents();
   void shuffleEvents();
   void insertEvents(TraceData& td);
 
+  //static methods
+  //TODO: templetize to accept any stl container able to use range_for?
+  static void loadTraceDataList(const string& fileList, vector<TraceData>& tdv);
+  static void exportTracesYamlFile(const string& exportFilename, vector<TraceData>& tdv);
+
 private:
   void findMinMaxBounds();
 
-  string fileName;
+  string filename;
 
   string patientID;
   string date;
   string location;
   string patternType;
   int patternLevel;
+  int classificationGroup;
   string workspace;
   string coordinateSpace;
   double totalTime;
@@ -155,6 +167,12 @@ inline string TraceData::getPatternType() const
 inline int TraceData::getPatternLevel() const
 {
   return patternLevel;
+}
+
+
+inline int TraceData::getClassificationGroup() const
+{
+  return classificationGroup;
 }
 
 
@@ -215,6 +233,12 @@ inline void TraceData::setPatternType(string str)
 inline void TraceData::setPatternLevel(int pLevel)
 {
   patternLevel = pLevel;
+}
+
+
+inline void TraceData::setClassificationGroup(int classGroup)
+{
+  classificationGroup = classGroup;
 }
 
 
@@ -281,6 +305,30 @@ inline bool TraceData::empty() const
 inline size_t TraceData::size() const
 {
   return events.size();
+}
+
+
+inline vector<Event>::iterator TraceData::begin()
+{
+  return events.begin();
+}
+
+
+inline vector<Event>::const_iterator TraceData::begin() const
+{
+  return events.begin();
+}
+
+
+inline vector<Event>::iterator TraceData::end()
+{
+  return events.end();
+}
+
+
+inline vector<Event>::const_iterator TraceData::end() const
+{
+  return events.end();
 }
 
 
