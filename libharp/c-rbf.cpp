@@ -478,8 +478,8 @@ void ClassNeuron::computeWeight(size_t stnIdx, unordered_multimap<int, Complex> 
 
   for(auto &eventGain : gainMap)
   {
-    //if gain is not from event in this class
-    if(eventGain.first != classGroup)
+    //if gain is from event in this class
+    if(eventGain.first == classGroup)
     {
       //find max for gain amplitude in cluster
       if(eventGain.second.amplitude > maxGain.amplitude)
@@ -545,16 +545,27 @@ void ClassLayer::train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv)
   //add class neuron for each class in the trainning data
   unordered_set<int> classSet;
 
+  cout << "Detecting classes:";
+
   //scan all traces to create class set
   for(auto &trace : tdv)
-    classSet.insert(trace.getClassificationGroup());
+  {
+    unordered_set<int>::iterator itr;
+    bool trig;
+
+    std::tie(itr, trig) = classSet.insert(trace.getClassificationGroup());
+
+    if(trig)
+      cout << (classSet.size() > 1 ? ", " : " ") << *itr;
+  }
+
+  cout << endl;
 
   //create neuron for each class in set
   for(auto &classGroup : classSet)
     neurons.emplace_back(classGroup, stl.size());
 
-  cout << "Classifications detected: " << classSet.size() << endl
-       << "Seperating events into neuron clusters" << endl;
+  cout << "Seperating events into neuron clusters" << endl;
 
   //XXX:TODO: thread, give each thread a rang of traces
   //seperate trainning data into N clusters, one for each st-layer neuron
@@ -573,8 +584,6 @@ void ClassLayer::train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv)
       eventClusters[nNeuron].emplace(group, &event);
     }
   }
-  //FIXME: eventClusters should always contain all st-neurons?
-  // delete st-neurons not clustered to?
 
   cout << "Cluster count " << eventClusters.size() << endl;
   cout << "Computing class layer weights" << endl;
@@ -603,13 +612,13 @@ void ClassLayer::train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv)
 }
 
 
-vector<Complex> ClassLayer::evaluate(const vector<Complex>& stLayerGains) const
+unordered_map<int,Complex> ClassLayer::evaluate(const vector<Complex>& stLayerGains) const
 {
-  vector<Complex> gains;
+  unordered_map<int,Complex> gains;
 
   // compute the gain for each class neuron
   for(auto& neuron : neurons)
-    gains.emplace_back(neuron.computeGain(stLayerGains));
+    gains[neuron.getClassGroup()] = neuron.computeGain(stLayerGains);
 
   return gains;
 }
@@ -662,30 +671,31 @@ string ClassLayer::exportYamlString()
  *  Network Objects
  ***********************************************************/
 
-vector<double> CRBFNeuralNetwork::evaluateTrace(const string& traceFile) const
+unordered_map<int,double> CRBFNeuralNetwork::evaluateTrace(const string& traceFile) const
 {
   cout << "\x1B[35m==>\x1B[0m "
        << "Evaluating trace from " << traceFile << endl;
 
-  //TODO: make thread safe
   TraceData trace(traceFile);
-  vector<double> cumulativeErrors(cLayer.size(), 0);
+  unordered_map<int,double> cumulativeErrors;
 
   trace.normalizeEvents();
+
+  cout << "Known class: " << trace.getClassificationGroup() << endl;
 
   //for each event in trace evaluate event
   for(auto &event : trace)
   {
     //evaluate spatio-temporal layer for given event, pass gains to class layer
-    vector<Complex> clGains = cLayer.evaluate(stLayer.evaluate(event));
+    unordered_map<int,Complex> clGains = cLayer.evaluate(stLayer.evaluate(event));
 
     //for each class add error to cumulativeErrors
-    for(int k = 0; k < cLayer.size(); k++)
-      cumulativeErrors[k] += computeErrorIncrement(clGains[k], trace.size());
+    for(auto &gain : clGains)
+      cumulativeErrors[gain.first] += computeErrorIncrement(gain.second, trace.size());
   }
 
   for(auto& cError:cumulativeErrors)
-    cout << cError << endl;
+    cout << cError.first << ": " << cError.second << endl;
 
   return cumulativeErrors;
 }

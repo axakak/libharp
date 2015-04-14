@@ -146,7 +146,7 @@ class ClassLayer
 {
 public:
   void train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv);
-  vector<Complex> evaluate(const vector<Complex>& stLayerGains) const;
+  unordered_map<int,Complex> evaluate(const vector<Complex>& stLayerGains) const;
   void loadFile(const string& filename);
   string exportYamlString();
 
@@ -167,7 +167,7 @@ class CRBFNeuralNetwork
 public:
   CRBFNeuralNetwork(){};
 
-  vector<double> evaluateTrace(const string& traceFile) const;
+  unordered_map<int,double> evaluateTrace(const string& traceFile) const;
 
   void train(const string& traceFileList);
   void exportYamlFile(const string& traceFile);
