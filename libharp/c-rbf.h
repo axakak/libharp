@@ -4,10 +4,10 @@
 
 #include "traceData.h"
 
-#include <cmath>
 #include <vector>
 #include <list>
 #include <unordered_map>
+#include <unordered_set>
 
 using namespace std;
 
@@ -20,10 +20,11 @@ struct Complex
 };
 
 //TODO: make edges a member of st-layer by creating edges object
+//TODO: make st-neuron errors local training variables
 
-/*******************************************************************************
+/******************************************************************************
  * Spatio-temporal Objects
- ******************************************************************************/
+ *****************************************************************************/
 
 class SpatioTemporalNeuron
 {
@@ -54,6 +55,7 @@ public:
   void adapt(const Event& event);
   void connect(SpatioTemporalNeuron* stNeuron);
   void disconnect(SpatioTemporalNeuron* stNeuron);
+  void disconnect();
   bool disconnectOld(int aMax);
   void neighbourWithLargestError(const SpatioTemporalNeuron* stNeuron);
   bool noEdges() const;
@@ -61,12 +63,11 @@ public:
   //export methods
   void exportConnectionsYaml(YAML::Emitter& e);
 
-
+  //method for sorting
   static bool less_time(const SpatioTemporalNeuron &a, const SpatioTemporalNeuron &b)
   {
     return a.getWeight().time < b.getWeight().time;
   }
-
 
 private:
   Event weight;
@@ -91,25 +92,23 @@ public:
   SpatioTemporalNeuron* findNeuronNearestToEvent(const Event& event);
   std::pair<SpatioTemporalNeuron*, SpatioTemporalNeuron*>
    findNeuronsNearestToEvent(const Event& event);
+  size_t retainNeurons(const unordered_set<const SpatioTemporalNeuron*> rSet);
 
-  /*
-  SpatioTemporalNeuron& operator[](size_t pos);
-  const SpatioTemporalNeuron& operator[](size_t pos) const;
-  */
   size_t size() const {return neurons.size();}
 
 private:
   void indexNeurons();
 
   //list container was selected for constant insert and delete times,
+  //and reference permanence (i.e. refs are valid util item is deleted)
   //which is only important during training
   list<SpatioTemporalNeuron> neurons;
 };
 
 
-/*******************************************************************************
+/******************************************************************************
  * Class Objects
- ******************************************************************************/
+ *****************************************************************************/
 
 class ClassNeuron
 {
@@ -158,9 +157,9 @@ private:
 };
 
 
-/*******************************************************************************
+/******************************************************************************
  *  Network Objects
- ******************************************************************************/
+ *****************************************************************************/
 
 class CRBFNeuralNetwork
 {
@@ -182,82 +181,50 @@ private:
 };
 
 
-/*******************************************************************************
+/******************************************************************************
  *  Inline Methods
- ******************************************************************************/
+ *****************************************************************************/
 
-inline void SpatioTemporalNeuron::setWeight(const Event& event)
-{
+inline void SpatioTemporalNeuron::setWeight(const Event& event){
   weight = event;
 }
 
-
-inline void SpatioTemporalNeuron::setError(double err)
-{
+inline void SpatioTemporalNeuron::setError(double err){
   error = err;
 }
 
-
-inline void SpatioTemporalNeuron::setIndex(int i)
-{
+inline void SpatioTemporalNeuron::setIndex(int i){
   index = i;
 }
 
-
-inline void SpatioTemporalNeuron::accumulateError(double err)
-{
+inline void SpatioTemporalNeuron::accumulateError(double err){
   error += err;
 }
 
-
-inline void SpatioTemporalNeuron::scaleError(double factor)
-{
+inline void SpatioTemporalNeuron::scaleError(double factor){
   error *= factor;
 }
 
-
-inline const Event& SpatioTemporalNeuron::getWeight() const
-{
+inline const Event& SpatioTemporalNeuron::getWeight() const{
   return weight;
 }
 
-
-inline double SpatioTemporalNeuron::getError() const
-{
+inline double SpatioTemporalNeuron::getError() const{
   return error;
 }
 
-
-inline bool SpatioTemporalNeuron::noEdges() const
-{
+inline bool SpatioTemporalNeuron::noEdges() const {
   return edges.empty();
 }
 
-
-/*
-inline SpatioTemporalNeuron& SpatioTemporalLayer::operator[](size_t pos)
-{
+inline ClassNeuron& ClassLayer::operator[](size_t pos){
   return neurons[pos];
 }
 
 
-inline const SpatioTemporalNeuron& SpatioTemporalLayer::operator[](size_t pos) const
-{
-  return neurons[pos];
-}
-*/
-
-
-
-inline ClassNeuron& ClassLayer::operator[](size_t pos)
-{
-  return neurons[pos];
-}
-
-
-/*******************************************************************************
+/******************************************************************************
  * YAML parser/emitter
- ******************************************************************************/
+ *****************************************************************************/
 
 YAML::Emitter& operator<< (YAML::Emitter& out, const SpatioTemporalNeuron& v);
 

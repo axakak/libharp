@@ -5,6 +5,7 @@ import sys
 import argparse
 import subprocess as sub
 import yaml
+import time
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,37 +14,78 @@ from mpl_toolkits.mplot3d import axes3d, art3d
 from numpy import *
 
 parser = argparse.ArgumentParser(description="To test crbf training")
-parser.add_argument('-t','--train', action='store', default='', metavar='<ifile>', help='Train neural network using trace list <ifile>')
-parser.add_argument('-o','--output', action='store', default='crbfNeuralNet.yaml', metavar='<ofile>', help='Export trained nueral network to <ofile>')
-parser.add_argument('-p','--plot', action='store_true', help='Plot data from previous training')
-parser.add_argument('-z','--zdata', action='store_true', help='Plot z spacial data on the z-axis')
-parser.add_argument('--gif', action='store_true')
-parser.add_argument('--png', action='store_true')
+
+parser.add_argument('-t','--train',
+                    action='store',
+                    metavar='<td_list_file>',
+                    help='Train neural network using <td_list_file>')
+
+parser.add_argument('-e','--eval',
+                    action='store',
+                    nargs=2,
+                    metavar='<file> <file>',
+                    help='Evaluate <file> using <file>')
+
+parser.add_argument('-o','--output',
+                    action='store',
+                    default='crbfNeuralNet.yaml',
+                    metavar='<ofile>',
+                    help='Export trained nueral network to <ofile>')
+
+parser.add_argument('-p','--plot',
+                    action='store_true',
+                    help='Plot data from previous training')
+
+parser.add_argument('-z','--zdata',
+                    action='store_true',
+                    help='Plot z spacial data on the z-axis')
+
+parser.add_argument('--gif',
+                    action='store_true')
+
+parser.add_argument('--png',
+                    action='store_true')
+
 args = parser.parse_args()
 
-if not (args.train or args.plot):
+if not (args.train or args.plot or args.eval):
     print('no command given, please use -h for a list of options')
     quit()
 
 origDir = os.getcwd()
 rootDir = os.path.dirname(os.path.dirname(origDir))
 
+###############################################################################
+# Train Neural Network
+###############################################################################
 if args.train:
     harpTrain = os.path.join(rootDir,'build/util/harptrain')
 
     # run c-rbf training
     harpTrainCMD = "'{}' {} {}".format(harpTrain, args.train, args.output)
     print(harpTrainCMD)
+    sTime = time.time()
     sub.call(harpTrainCMD,shell=True,stdout=sys.stdout)
-'''
+    eTime = time.time()
+    print('Training completed in {:.3f}s'.format(eTime-sTime))
+
+###############################################################################
+# Evaluate Neural Network
+###############################################################################
 if args.eval:
     harpEval = os.path.join(rootDir,'build/util/harpevaluate')
 
     # run c-rbf evaluation
-    harpEvalCMD = "'{}' {} {}".format(harpTrain, args.eval)
+    harpEvalCMD = "'{}' {} {}".format(harpEval, args.eval[0], args.eval[1])
     print(harpEvalCMD)
+    sTime = time.time()
     sub.call(harpEvalCMD,shell=True,stdout=sys.stdout)
-'''
+    eTime = time.time()
+    print('Evaluation completed in {:.3f}s'.format(eTime-sTime))
+
+###############################################################################
+# Plot Trainning output
+###############################################################################
 if args.plot:
     # display results
     print('\x1B[34m==> \x1B[0m Plotting results')
@@ -81,7 +123,10 @@ if args.plot:
     #load training trace date yaml file
     for yamlDoc in yaml.load_all(open('normalizedTrainingData.yaml', 'r')):
         ntd = np.array((yamlDoc['events'][1:]))
-        tdScatter = ax.scatter(ntd[::60,0],ntd[::60,1],ntd[::60,zidx], s=5, c='grey', edgecolor='paleturquoise', marker='o', depthshade=False, zorder=0, alpha=0.8)
+        tdScatter = ax.scatter(ntd[::60,0],ntd[::60,1],ntd[::60,zidx],
+                               s=5, c='grey', edgecolor='paleturquoise',
+                               marker='o', depthshade=False, zorder=0,
+                               alpha=0.8)
 
     ims = []
 
@@ -89,15 +134,26 @@ if args.plot:
     for yamlDoc in yaml.load_all(open('spatioTemporalTrain.yaml', 'r')):
         stnw = np.array((yamlDoc['spatio-temporal-neuron-weights'][1:]))
         stnc = np.array((yamlDoc['spatio-temporal-neuron-edges'][1:]))
-        links = np.array([vstack((stnw[cidx[0]], stnw[cidx[1]])).tolist() for cidx in stnc])
-        lc = art3d.Line3DCollection([[tuple(con[0,[0,1,zidx]]), tuple(con[1,[0,1,zidx]])] for con in links], lw=0.5 )
+        links = np.array([vstack((stnw[cidx[0]], stnw[cidx[1]])).tolist()
+                                 for cidx in stnc])
+
+        lc = art3d.Line3DCollection(
+                          [[tuple(con[0,[0,1,zidx]]), tuple(con[1,[0,1,zidx]])]
+                          for con in links], lw=0.5 )
+
         lc.set_color('coral')
         lines = ax.add_collection(lc)
-        nScatter = ax.scatter(stnw[:,0],stnw[:,1],stnw[:,zidx], s=30, c='crimson', edgecolor='coral', marker='o', depthshade=False)
+        nScatter = ax.scatter(stnw[:,0],stnw[:,1],stnw[:,zidx],
+                              s=30, c='crimson', edgecolor='coral', marker='o',
+                              depthshade=False)
+
         ims.append([lines,nScatter])
 
 
-    legend = ax.legend([tdScatter, (lines, nScatter)] ,['Training Data','Spatio-temporal Neurons'], fontsize='medium', loc='lower right')
+    legend = ax.legend([tdScatter, (lines, nScatter)],
+                       ['Training Data','Spatio-temporal Neurons'],
+                       fontsize='medium', loc='lower right')
+
     legend.get_frame().set_edgecolor('darkgray')
 
     ani = animation.ArtistAnimation(fig, ims, interval=1500, repeat_delay=3000)
