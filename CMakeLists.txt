@@ -1,11 +1,8 @@
-# CMakeLists files in this project can
-# refer to the root source directory of the project as ${HARP_SOURCE_DIR} and
-# to the root binary directory of the project as ${HARP_BINARY_DIR}.
 cmake_minimum_required(VERSION 2.6)
-project(HARP CXX)
+project(LIBHARP CXX)
 
-set(HARP_VERSION_MAJOR "0")
-set(HARP_VERSION_MINOR "1")
+set(HARP_VERSION_MAJOR "1")
+set(HARP_VERSION_MINOR "0")
 set(HARP_VERSION_PATCH "0")
 
 #TODO: expand debug build specs

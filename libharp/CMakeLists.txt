@@ -1,9 +1,9 @@
 set(harplib_SRCS c-rbf.cpp traceData.cpp)
-add_library(libharp ${harplib_SRCS})
+add_library(harp ${harplib_SRCS})
 
-#TODO: add compile features, such as constexpr
-#target_compile_features(libharp PRIVATE cxx_constexpr)
+#TODO: add compile features check, (i.e constexpr)
+#target_compile_features(harp PRIVATE cxx_constexpr)
 
-target_include_directories(libharp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(harp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-target_link_libraries(libharp ${YAMLCPP_LIBRARIES})
+target_link_libraries(harp ${YAMLCPP_LIBRARIES})
