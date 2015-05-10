@@ -7,16 +7,15 @@
 #include <iostream>
 #include <iomanip>
 #include <chrono>
-#include <unordered_set>
+#include <cmath>
 
 //constexpr int g_num_threads = 4;
 
-
-/*******************************************************************************
+/******************************************************************************
  * Spatio-temporal Objects
- ******************************************************************************/
+ *****************************************************************************/
 
-/* SpatioTemporalNeuron *******************************************************/
+/* SpatioTemporalNeuron ******************************************************/
 
 Complex SpatioTemporalNeuron::computeGain(const Event& event) const
 {
@@ -87,6 +86,16 @@ void SpatioTemporalNeuron::disconnect(SpatioTemporalNeuron* stNeuron)
 }
 
 
+void SpatioTemporalNeuron::disconnect()
+{
+  for(auto &edge : edges)
+  {
+    edge.first->edges.erase(this);
+    edges.erase(edge.first);
+  }
+}
+
+
 bool SpatioTemporalNeuron::disconnectOld(int aMax)
 {
   bool triggered = false;
@@ -128,7 +137,7 @@ void SpatioTemporalNeuron::exportConnectionsYaml(YAML::Emitter& e)
          << YAML::BeginSeq << index << edge.first->index << YAML::EndSeq;
 }
 
-/* SpatioTemporalLayer ********************************************************/
+/* SpatioTemporalLayer *******************************************************/
 
 string SpatioTemporalLayer::exportYamlString()
 {
@@ -336,8 +345,8 @@ void SpatioTemporalLayer::initRandomNeurons(int count)
 {
   // assign initial values to the weights with |w| <= 1 & 〈w <= 2pi
   std::random_device rd;// if too slow, use as seed to pseudo-random generator
-  std::uniform_real_distribution<> sDist(0,1);// range not inclusive [0,1)
-  std::uniform_real_distribution<> tDist(0,2*g_pi);// range not inclusive [0,2pi)
+  std::uniform_real_distribution<> sDist(0,1);//dist not inclusive [0,1)
+  std::uniform_real_distribution<> tDist(0,2*g_pi);//dist not inclusive [0,2pi)
 
   neurons.clear();
 
@@ -425,9 +434,31 @@ std::pair<SpatioTemporalNeuron*, SpatioTemporalNeuron*>
 }
 
 
-/*******************************************************************************
+size_t SpatioTemporalLayer::retainNeurons(const unordered_set<const SpatioTemporalNeuron*> rSet)
+{
+  size_t count = 0;
+
+  for(auto it=neurons.begin(); it != neurons.end(); it++)
+  {
+    //if neuron not found in retain set, remove it from st-layer
+    if(rSet.count(&(*it)) == 0)
+    {
+      it->disconnect();
+      neurons.erase(it);
+      ++count;
+    }
+  }
+
+  if(cout)
+    indexNeurons();
+
+  return count;
+}
+
+
+/******************************************************************************
  * Class Objects
- ******************************************************************************/
+ *****************************************************************************/
 
 Complex ClassNeuron::computeGain(const vector<Complex>& stlGains) const
 {
@@ -531,11 +562,12 @@ void ClassNeuron::exportWeightsYaml(YAML::Emitter& e) const
     << YAML::EndMap;
 }
 
-/* ClassLayer *****************************************************************/
+/* ClassLayer ****************************************************************/
 
 void ClassLayer::train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv)
 {
-  unordered_map<const SpatioTemporalNeuron* ,unordered_multimap<int, const Event*> > eventClusters;
+  unordered_map<const SpatioTemporalNeuron*,
+                unordered_multimap<int, const Event*> > eventClusters;
 
   cout << "\x1B[36m==>\x1B[0m " << "Training class layer" << endl;
 
@@ -586,6 +618,21 @@ void ClassLayer::train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv)
   }
 
   cout << "Cluster count " << eventClusters.size() << endl;
+
+  // remove neurons that have no event clustered to them
+  if(eventClusters.size() < stl.size())
+  {
+    cout << "Unused st-neurons detected" << endl;
+
+    unordered_set<const SpatioTemporalNeuron*> usedSTNeurons;
+
+    for(auto& neuron : eventClusters)
+      usedSTNeurons.insert(neuron.first);
+
+    cout << "Total st-neurons removed: "
+         << stl.retainNeurons(usedSTNeurons) << endl;
+  }
+
   cout << "Computing class layer weights" << endl;
 
   //XXX:TODO: thread, give each thread a range of clusters
@@ -667,9 +714,9 @@ string ClassLayer::exportYamlString()
   return out.c_str();
 }
 
-/************************************************************
+/******************************************************************************
  *  Network Objects
- ***********************************************************/
+ *****************************************************************************/
 
 unordered_map<int,double> CRBFNeuralNetwork::evaluateTrace(const string& traceFile) const
 {
@@ -762,9 +809,9 @@ void CRBFNeuralNetwork::loadCRBFNeuralNetworkFile(const string& crbfFile)
 }
 
 
-/************************************************************
+/******************************************************************************
  * YAML parser/emitter
- ***********************************************************/
+ *****************************************************************************/
 
 YAML::Emitter& operator<< (YAML::Emitter& out, const SpatioTemporalNeuron& v)
 {
