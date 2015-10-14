@@ -766,7 +766,7 @@ void CRBFNeuralNetwork::train(const string& traceFileList)
   // load all traces into trace for network training
   TraceData::loadTraceDataList(traceFileList, traces);
 
-  // normalize trace data
+  // normalize every trace
   for(auto &t : traces)
     t.normalizeEvents();
 
