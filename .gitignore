@@ -10,3 +10,7 @@ test/*traces/
 crbfNeuralNet.yaml
 normalizedTrainingData.yaml
 spatioTemporalTrain.yaml
+
+#python
+################
+*.pyc
