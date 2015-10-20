@@ -1,5 +1,7 @@
 #include <c-rbf.h>
 
+#include <fstream>
+
 using namespace std;
 
 
@@ -9,7 +11,11 @@ int main(int argc, char** argv)
 
   neuralNet.loadCRBFNeuralNetworkFile(argv[1]);
 
-  neuralNet.evaluateTrace(argv[2]);
+  ifstream fileList(argv[2]);
+  string traceFile;
+
+  while(getline(fileList, traceFile))
+    neuralNet.evaluateTrace(traceFile);
 
   return 0;
 }
