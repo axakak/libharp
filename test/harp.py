@@ -155,7 +155,7 @@ if __name__ == "__main__":
     import argparse
     import time
 
-    commandParser = argparse.ArgumentParser(description="harp utility wrapper")
+    commandParser = argparse.ArgumentParser(description="harp command line utility")
 
     commandParser.add_argument('command',
                                action='store',
