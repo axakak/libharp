@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.4
+#!/usr/bin/env python3
 import yaml
 import argparse
 
@@ -26,7 +26,7 @@ args = parser.parse_args()
 # YAML Document Setup
 ###############################################################################
 #open file into stream
-yamlStream = open(args.crbfFilename, 'r')
+yamlStream = open(args.crbfFilename)
 
 docCount = 0
 
@@ -37,7 +37,7 @@ for yamlDoc in yaml.load_all(yamlStream):
 print('Document count: {}'.format(docCount))
 
 #yaml.load* consumes the stream, must reopen
-yamlStream = open(args.crbfFilename, 'r')
+yamlStream = open(args.crbfFilename)
 
 #parse yaml stream
 if docCount > 1:
@@ -84,6 +84,7 @@ else:
 
 title = ''
 
+
 ###############################################################################
 # Plotters
 ###############################################################################
@@ -115,7 +116,7 @@ if 'spatio-temporal-neuron-weights' in yamlDoc:
     #load st-neuron weights into numpy array, skip data key (index 0) by [1:]
     stnw = np.array((yamlDoc['spatio-temporal-neuron-weights'][1:]))
 
-    print('Coloring coding weights for class {}'.format(
+    print('Coloring coding weights for class: {}'.format(
           yamlDoc['class-layer']['class-neurons'][0]['class-group']))
 
     cWeights = yamlDoc['class-layer']['class-neurons'][0]['weights'][1:]
