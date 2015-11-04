@@ -39,6 +39,7 @@ fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(16,5),tight_layout=True)
 ###############################################################################
 # Box Plot
 ###############################################################################
+axes[0].set_title('Classification Certainty Distribution')
 
 #set x-axis properties
 axes[0].set_xlabel('Trace Input (known class)')
@@ -63,7 +64,7 @@ axes[0].text(1.5, -ymax+yoffset, 'More Likely\nNondominant', color='gray', ha='c
 ###############################################################################
 # Scatter Plot
 ###############################################################################
-
+axes[1].set_title('Class Errors')
 axes[1].set_xlabel('Dominant Class Error (%)')
 
 axes[1].set_ylabel('Nondominant Class Error (%)')
@@ -97,7 +98,7 @@ axes[1].legend(loc='upper right', fontsize='medium',scatterpoints=1,title='known
 ###############################################################################
 #Bar Chart
 ###############################################################################
-
+axes[2].set_title('Classification Count')
 axes[2].set_ylabel('Neural Network Classification Count')
 
 axes[2].set_xlabel('Trace Input (known class)')
