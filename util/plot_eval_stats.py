@@ -21,8 +21,8 @@ args = parser.parse_args()
 evalStats = np.recfromcsv(args.file,skip_header=1,
                             names=('trace','class','err_non','err_dom'))
 
-evalStats['err_non'] = evalStats['err_non']*100
-evalStats['err_dom'] = evalStats['err_dom']*100
+evalStats['err_non'] = evalStats['err_non']
+evalStats['err_dom'] = evalStats['err_dom']
 
 evalStats = append_fields(evalStats,'err_diff', (evalStats['err_non']-evalStats['err_dom']))
 
@@ -30,44 +30,75 @@ evalStats = append_fields(evalStats,'err_diff', (evalStats['err_non']-evalStats[
 errDiff = hstack((vstack(evalStats[evalStats['class']%2 == 1]['err_diff']),
            vstack(evalStats[evalStats['class']%2 == 0]['err_diff'])))
 
-# x,y = plt.figaspect(.65)*1.5
-fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(16,5),tight_layout=True)
+trace = evalStats['trace'][0].decode()[:6]
 
-# plt.rc('text', usetex=True)
-# plt.rc('font', family='Computer Modern Roman')
+plt.rc('font', family = 'serif', serif = 'CMU Serif')
+
+###############################################################################
+# Confusion matrix calculations
+###############################################################################
+TP = len(errDiff[errDiff[:,0]>0,0]) #true positive
+FN = len(errDiff[errDiff[:,0]<0,0]) #false negative
+FP = len(errDiff[errDiff[:,1]>0,1]) #false positive
+TN = len(errDiff[errDiff[:,1]<0,1]) #true negative
+
+TPR = TP/(TP+FN)
+FPR = FP/(FP+TN)
+TNR = TN/(FP+TN)
+
+ACC = (TP+TN)/(TP+FN+FP+TN)
+
+print('True positive: {}'.format(TP))
+print('False negative: {}'.format(FN))
+
+print('False positive: {}'.format(FP))
+print('True negative: {}'.format(TN))
+
+print('True positive rate: {}'.format(TPR))
+print('False positive rate: {}'.format(FPR))
+print('Accuracy: {}'.format(ACC))
+
+
 
 ###############################################################################
 # Box Plot
 ###############################################################################
-axes[0].set_title('Classification Certainty Distribution')
+x,y = plt.figaspect(.9)
+plt.figure(figsize=(x,y))
+ax = plt.gca()
+
+ax.set_title('Class Error Difference Distribution')
 
 #set x-axis properties
-axes[0].set_xlabel('Trace Input (known class)')
+ax.set_xlabel('Trace Input (True Class)')
 
 #set y-axis properties
-axes[0].set_ylabel('Nerual Network Class Error Difference (%)')
+ax.set_ylabel('Class Error Difference $(c_{non}-c_{dom})$')
 
-axes[0].axhline(y=0, color='k')
+ax.axhline(y=0, color='gray')
 
 labels = [('Dominant'),('Nondominant')]
-axes[0].boxplot(errDiff,labels=labels)
+ax.boxplot(errDiff,labels=labels)
 
-ymax = max([abs(y) for y in axes[0].get_ylim()])
+ymax = max([abs(y) for y in ax.get_ylim()])
 
-yoffset = (axes[0].get_ybound()[1] - axes[0].get_ybound()[0])/24
+yoffset = (ax.get_ybound()[1] - ax.get_ybound()[0])/24
 
-axes[0].set_ylim(-ymax, ymax)
-axes[0].text(1.5, ymax-yoffset, 'More Likely\nDominant', color='gray', ha='center', va='top')
-axes[0].text(1.5, -ymax+yoffset, 'More Likely\nNondominant', color='gray', ha='center')
+ax.set_ylim(-ymax, ymax)
+ax.text(1.5, ymax-yoffset, 'More Likely\nDominant', color='gray', ha='center', va='top')
+ax.text(1.5, -ymax+yoffset, 'More Likely\nNondominant', color='gray', ha='center')
 
 
 ###############################################################################
 # Scatter Plot
 ###############################################################################
-axes[1].set_title('Class Errors')
-axes[1].set_xlabel('Dominant Class Error (%)')
+plt.figure(figsize=(x,y))
+ax = plt.gca()
 
-axes[1].set_ylabel('Nondominant Class Error (%)')
+ax.set_title('Class Errors')
+ax.set_xlabel('Dominant Class Error')
+
+ax.set_ylabel('Nondominant Class Error')
 
 domXY = (evalStats[evalStats['class']%2 == 1]['err_dom'],
          evalStats[evalStats['class']%2 == 1]['err_non'])
@@ -75,53 +106,60 @@ domXY = (evalStats[evalStats['class']%2 == 1]['err_dom'],
 nonXY = (evalStats[evalStats['class']%2 == 0]['err_dom'],
          evalStats[evalStats['class']%2 == 0]['err_non'])
 
-axes[1].scatter(domXY[0],domXY[1],label='dominant',c='r',alpha=0.75,
+ax.scatter(domXY[0],domXY[1],label='dominant',c='r',alpha=0.75,
                 linewidth=0.1,edgecolors='gray')
 
-axes[1].scatter(nonXY[0],nonXY[1],label='nondominant',c='b',alpha=0.75,
+ax.scatter(nonXY[0],nonXY[1],label='nondominant',c='b',alpha=0.75,
                 linewidth=0.1,edgecolors='gray')
 
-axmax = max([axes[1].get_ybound()[1],axes[1].get_xbound()[1]])
-axmin = min([axes[1].get_ybound()[0],axes[1].get_xbound()[0]])
-axes[1].set_ylim(axmin, axmax)
-axes[1].set_xlim(axmin, axmax)
-axes[1].plot(np.linspace(axmin,axmax),np.linspace(axmin,axmax), color='k')
+axmax = max([ax.get_ybound()[1],ax.get_xbound()[1]])
+axmin = min([ax.get_ybound()[0],ax.get_xbound()[0]])
 
-yoffset = (axes[1].get_ybound()[1] - axes[2].get_ybound()[0])/24
+ax.set_ylim(axmin, axmax)
+ax.set_xlim(axmin, axmax)
+ax.plot(np.linspace(axmin,axmax),np.linspace(axmin,axmax), color='gray')
 
-axes[1].text(axmin+yoffset, axmax-yoffset, r'More Likely Dominant', color='gray', va='top')
-axes[1].text(axmax-yoffset, axmin+yoffset, r'More Likely Nondominant', color='gray', ha='right')
+yoffset = (ax.get_ybound()[1] - ax.get_ybound()[0])/24
 
-axes[1].legend(loc='upper right', fontsize='medium',scatterpoints=1,title='known class',framealpha=.5)
+ax.text(axmin+yoffset, axmax-yoffset, r'More Likely Dominant', color='gray', va='top')
+ax.text(axmax-yoffset, axmin+yoffset, r'More Likely Nondominant', color='gray', ha='right')
+
+ax.legend(loc='upper right', fontsize='medium',scatterpoints=1,title='known class',framealpha=.75)
 
 
 ###############################################################################
 #Bar Chart
 ###############################################################################
-axes[2].set_title('Classification Count')
-axes[2].set_ylabel('Neural Network Classification Count')
+plt.figure(figsize=(x,y))
+ax = plt.gca()
 
-axes[2].set_xlabel('Trace Input (known class)')
-axes[2].set_xlim(0.5, 2.5)
-axes[2].set_xticks([1,2])
-axes[2].set_xticklabels(['Dominant', 'Nondominant'])
+ax.set_title('Predicted Class Count')
+ax.set_ylabel('Neural Network Predicted Class Count')
 
-axes[2].axhline(y=0, color='k')
+ax.set_xlabel('Trace Input (True Class)')
+ax.set_xlim(0.5, 2.5)
+ax.set_xticks([1,2])
+ax.set_xticklabels(['Dominant', 'Nondominant'])
 
-barCount = [len(errDiff[errDiff[:,0]>0,0]),
-            len(errDiff[errDiff[:,0]<0,0])*-1,
-            len(errDiff[errDiff[:,1]>0,1]),
-            len(errDiff[errDiff[:,1]<0,1])*-1]
+ax.axhline(y=0, color='gray')
 
-axes[2].bar((1,1,2,2), barCount, width=0.2, align='center',
+
+barCount = [TP,-FN,FP,-TN]
+
+ax.bar((1,1,2,2), barCount, width=0.2, align='center',
              color=('r','b','r','b'), edgecolor='gray')
 
-ymax = max([abs(y) for y in axes[2].get_ybound()])
-yoffset = (axes[2].get_ybound()[1] - axes[2].get_ybound()[0])/24
+ymax = max([abs(y) for y in ax.get_ybound()])
+yoffset = (ax.get_ybound()[1] - ax.get_ybound()[0])/24
 
-axes[2].set_ylim(-ymax,ymax)
-axes[2].set_yticklabels([int(abs(y)) for y in axes[2].get_yticks()])
-axes[2].text(1.5, ymax-yoffset, 'Classified\nDominant', color='gray', ha='center', va='top')
-axes[2].text(1.5, -ymax+yoffset, 'Classified\nNondominant', color='gray', ha='center')
+ax.set_ylim(-ymax,ymax)
+ax.set_yticklabels([int(abs(y)) for y in ax.get_yticks()])
+ax.text(1.5, ymax-yoffset, 'Classified\nDominant', color='gray', ha='center', va='top')
+ax.text(1.5, -ymax+yoffset, 'Classified\nNondominant', color='gray', ha='center')
+
+
+for fig in plt.get_fignums():
+	plt.figure(num=fig)
+	plt.savefig('{}{}.pdf'.format(trace,plt.gca().get_title().replace(' ','_').lower()))
 
 plt.show()
