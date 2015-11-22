@@ -43,10 +43,11 @@ FP = len(errDiff[errDiff[:,1]>0,1]) #false positive
 TN = len(errDiff[errDiff[:,1]<0,1]) #true negative
 
 TPR = TP/(TP+FN)
-FPR = FP/(FP+TN)
 TNR = TN/(FP+TN)
 
-ACC = (TP+TN)/(TP+FN+FP+TN)
+PPV = TP/(TP+FP)
+NPV = TN/(FN+TN)
+
 
 print('True positive: {}'.format(TP))
 print('False negative: {}'.format(FN))
@@ -54,9 +55,13 @@ print('False negative: {}'.format(FN))
 print('False positive: {}'.format(FP))
 print('True negative: {}'.format(TN))
 
-print('True positive rate: {}'.format(TPR))
-print('False positive rate: {}'.format(FPR))
-print('Accuracy: {}'.format(ACC))
+print('True positive rate (sensitivity): {}'.format(TPR))
+print('True negative rate (specificity): {}'.format(TNR))
+
+print('Positive predictive value: {:.2f}'.format(PPV))
+print('Negative predictive value: {:.2f}'.format(NPV))
+
+
 
 
 
@@ -124,7 +129,7 @@ yoffset = (ax.get_ybound()[1] - ax.get_ybound()[0])/24
 ax.text(axmin+yoffset, axmax-yoffset, r'More Likely Dominant', color='gray', va='top')
 ax.text(axmax-yoffset, axmin+yoffset, r'More Likely Nondominant', color='gray', ha='right')
 
-ax.legend(loc='upper right', fontsize='medium',scatterpoints=1,title='known class',framealpha=.75)
+ax.legend(loc='upper right', fontsize='medium',scatterpoints=1,title='True Class',framealpha=.75)
 
 
 ###############################################################################
