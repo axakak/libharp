@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-import sys
-import subprocess as sub
 
 
 def find_bin(name):
@@ -28,27 +26,49 @@ def find_bin(name):
 # Train Neural Network
 ###############################################################################
 def train(in_file, out_file='crbfNeuralNet.yaml'):
-    import os
+    import subprocess as sub
+    from datetime import datetime
+
     harpTrain = find_bin('harptrain')
 
-    print(os.getcwd())
+    out = ["'{}' {} {}\n".format(harpTrain, in_file, out_file)]
 
     # run c-rbf training
-    harpTrainCMD = "'{}' {} {}".format(harpTrain, in_file, out_file)
-    print(harpTrainCMD)
-    sub.run(harpTrainCMD,shell=True,stdout=sys.stdout)
+    harpTrainArgs = [harpTrain, in_file, out_file]
+    print(harpTrainArgs)
+    p = sub.Popen(harpTrainArgs, stdout=sub.PIPE, stderr=sub.STDOUT, bufsize=1)
 
+    for line in iter(p.stdout.readline, b''):
+        so = line.decode()
+        out.append(so)
+        if '==>' in so:
+            so = so.replace('\n','') + datetime.today().strftime(" [%H:%M:%S]\n")
+
+        print(so, end='')
+
+    return out
 
 ###############################################################################
 # Evaluate Neural Network
 ###############################################################################
 def eval(neural_net, trace):
+    import subprocess as sub
+
     harpEval = find_bin('harpevaluate')
 
+    out = ["'{}' {} {}\n".format(harpEval, neural_net, trace)]
+
     # run c-rbf evaluation
-    harpEvalCMD = "'{}' {} {}".format(harpEval, neural_net, trace)
-    print(harpEvalCMD)
-    sub.call(harpEvalCMD,shell=True,stdout=sys.stdout)
+    harpEvalArgs = [harpEval, neural_net, trace]
+    print(harpEvalArgs)
+    p = sub.Popen(harpEvalArgs, stdout=sub.PIPE, stderr=sub.STDOUT, bufsize=1)
+
+    for line in iter(p.stdout.readline, b''):
+        so = line.decode()
+        out.append(so)
+        print(so, end='')
+
+    return out
 
 
 ###############################################################################
@@ -96,6 +116,7 @@ def plot(train_list, st_neuron_train, zdata, gif, png, show):
     print('Plotting normalized training data in: {}'.format(train_list.name))
     #load training trace date yaml file
     trainList = train_list.read().splitlines()
+    skip = 250
     for trace in trainList:
         print(trace)
         yamlDoc = yaml.load(open(trace))
@@ -104,8 +125,8 @@ def plot(train_list, st_neuron_train, zdata, gif, png, show):
             tdMax = td.max(0)
             tdMin = td.min(0)
             tdScale = np.array([1,1,1,2*np.pi]) / (tdMax - tdMin)
-            td = (td - tdMin) * tdScale
-        tdScatter = ax.scatter(td[::100,0],td[::100,1],td[::100,zidx],
+            td = (td[::skip,:] - tdMin) * tdScale
+        tdScatter = ax.scatter(td[:,0],td[:,1],td[:,zidx],
                                s=5, c='grey', edgecolor='paleturquoise',
                                marker='o', depthshade=False, zorder=0,
                                alpha=0.8)
@@ -119,9 +140,8 @@ def plot(train_list, st_neuron_train, zdata, gif, png, show):
         links = np.array([np.vstack((stnw[cidx[0]], stnw[cidx[1]])).tolist()
                                  for cidx in stnc])
 
-        lc = art3d.Line3DCollection(
-                          [[tuple(con[0,[0,1,zidx]]), tuple(con[1,[0,1,zidx]])]
-                          for con in links], lw=0.5 )
+        lc = art3d.Line3DCollection([[tuple(con[0,[0,1,zidx]]),
+                                      tuple(con[1,[0,1,zidx]])] for con in links], lw=0.5)
 
         lc.set_color('coral')
         lines = ax.add_collection(lc)
