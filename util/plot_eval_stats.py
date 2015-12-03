@@ -17,18 +17,14 @@ parser.add_argument('file')
 args = parser.parse_args()
 
 
-# evalStats = mlab.csv2rec(args.file, skiprows=1)
 evalStats = np.recfromcsv(args.file,skip_header=1,
-                            names=('trace','class','err_non','err_dom'))
-
-evalStats['err_non'] = evalStats['err_non']
-evalStats['err_dom'] = evalStats['err_dom']
+                        names=('neural_net','trace','true_class','err_non','err_dom'))
 
 evalStats = append_fields(evalStats,'err_diff', (evalStats['err_non']-evalStats['err_dom']))
 
 #create 2 col array of dominant and nondominant error differences
-errDiff = hstack((vstack(evalStats[evalStats['class']%2 == 1]['err_diff']),
-           vstack(evalStats[evalStats['class']%2 == 0]['err_diff'])))
+errDiff = hstack((vstack(evalStats[evalStats['true_class']%2 == 1]['err_diff']),
+           vstack(evalStats[evalStats['true_class']%2 == 0]['err_diff'])))
 
 trace = evalStats['trace'][0].decode()[:6]
 
@@ -60,9 +56,6 @@ print('True negative rate (specificity): {}'.format(TNR))
 
 print('Positive predictive value: {:.2f}'.format(PPV))
 print('Negative predictive value: {:.2f}'.format(NPV))
-
-
-
 
 
 ###############################################################################
@@ -105,11 +98,11 @@ ax.set_xlabel('Dominant Class Error')
 
 ax.set_ylabel('Nondominant Class Error')
 
-domXY = (evalStats[evalStats['class']%2 == 1]['err_dom'],
-         evalStats[evalStats['class']%2 == 1]['err_non'])
+domXY = (evalStats[evalStats['true_class']%2 == 1]['err_dom'],
+         evalStats[evalStats['true_class']%2 == 1]['err_non'])
 
-nonXY = (evalStats[evalStats['class']%2 == 0]['err_dom'],
-         evalStats[evalStats['class']%2 == 0]['err_non'])
+nonXY = (evalStats[evalStats['true_class']%2 == 0]['err_dom'],
+         evalStats[evalStats['true_class']%2 == 0]['err_non'])
 
 ax.scatter(domXY[0],domXY[1],label='dominant',c='r',alpha=0.75,
                 linewidth=0.1,edgecolors='gray')
