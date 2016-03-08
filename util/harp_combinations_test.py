@@ -102,6 +102,12 @@ if __name__ == "__main__":
                         type=open,
                         help='one or more files with line separated trace file paths')
 
+    parser.add_argument('-p','--processes',
+                        choices=range(1, os.cpu_count()+1),
+                        default=os.cpu_count()/2,
+                        type=int,
+                        help='number of worker processes to use. default: (cpu count)/2')
+
     args = parser.parse_args()
 
     traceFiles = [f.read().splitlines(keepends=True) for f in args.class_list_files]
@@ -113,7 +119,7 @@ if __name__ == "__main__":
     eval_csv = open('eval_out_all.csv', mode='w', buffering=1)
 
     # create pool of processes and write returned csv entries
-    with Pool() as p:
+    with Pool(processes=args.processes) as p:
         imap_it = p.imap(harpTrainEval, range(len(traceFiles)))
 
         for x in imap_it:
