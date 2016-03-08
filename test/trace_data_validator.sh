@@ -23,3 +23,6 @@ $TDT $INPUTTRACEDATA
 #cat trace_list.txt | xargs grep -l "type: width" | xargs sed -i '' -e 's/\(.*group: \)\([[:digit:]]\)$/\11/'
 
 #grep -lr "complexity" * | xargs grep -l "level: 1" >> comp_1_list.txt
+
+# change file ext
+# for f in *.txt; do mv $f "${f%.*}.yaml"; done
