@@ -177,6 +177,8 @@ void TraceData::normalizeEvents()
     event.z = (event.z - minBound.z) * eventScale.z;
     event.time = (event.time - minBound.time) * eventScale.time;
   }
+
+  coordinateSpace = "normalized";
 }
 
 

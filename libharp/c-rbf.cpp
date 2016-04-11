@@ -766,12 +766,9 @@ void CRBFNeuralNetwork::train(const string& traceFileList)
   // load all traces into trace for network training
   TraceData::loadTraceDataList(traceFileList, traces);
 
-  // normalize trace data
+  // normalize every trace
   for(auto &t : traces)
     t.normalizeEvents();
-
-  // export normalized trace data
-  TraceData::exportTracesYamlFile("normalizedTrainingData.yaml", traces);
 
   // train Spatio Temporal Layer
   stLayer.train(traces, 50, 60000, 10);
