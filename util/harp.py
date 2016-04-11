@@ -10,7 +10,7 @@ def find_bin(name):
     i = cwdDir.find('libharp')
 
     if i:
-        libDir = os.path.join(cwdDir[:i],'libharp')
+        libDir = os.path.join(cwdDir[:i], 'libharp')
     else:
         print('Error: utility only works when run from inside project' )
 
@@ -72,7 +72,7 @@ def eval(neural_net, trace):
 
 
 ###############################################################################
-# Plot Training output
+# Plot HARP data
 ###############################################################################
 def td_arrayfromyaml(trace):
     import yaml
@@ -100,11 +100,14 @@ def plot(harp_files, zdata, gif, png, show):
     import matplotlib.animation as animation
     from mpl_toolkits.mplot3d import axes3d, art3d
 
+    plt.rc('font', family = 'serif', serif = 'CMU Serif')
+
     trace_files = []
+    trace_file_lists = []
     neural_net_files = []
     train_file = []
 
-    print('\x1B[34m==> \x1B[0m Parsing File')
+    print('\x1B[34m==> \x1B[0m Parsing Files')
 
     #TODO: if yaml files use an explicit file type key, parsing would be much simpler
     for fname in harp_files:
@@ -121,9 +124,8 @@ def plot(harp_files, zdata, gif, png, show):
                     neural_net_files.append(fname)
             else: #multi doc yaml file, assume st training
                 train_file.append(fname)
-        else: # assume text file
-            for trace in f.read().splitlines():
-                trace_files.append(trace)# add to trace data file list
+        else: # assume trace list text file
+            trace_file_lists.append(fname)# add to trace data file list
 
     # display results
     print('\x1B[34m==> \x1B[0m Plotting')
@@ -134,7 +136,8 @@ def plot(harp_files, zdata, gif, png, show):
     ax = fig.add_subplot(111, projection='3d')
 
     # set axes properties
-    ax.view_init(elev=30, azim=-70)
+    # ax.view_init(elev=40, azim=-115)#stc-3
+    ax.view_init(elev=36, azim=-70)#stc-2
 
     ax.set_xlabel('x')
     ax.set_xlim(0, 1)
@@ -162,18 +165,46 @@ def plot(harp_files, zdata, gif, png, show):
     if len(trace_files) > 0:
         print('normalized trace data')
         #load training trace date yaml file
-        skip = 200
         for trace in trace_files:
             print(trace)
             td = td_arrayfromyaml(trace)
 
-            tdScatter = ax.scatter(td[:,0],td[:,1],td[:,zidx],color=None)#,
-                                #    s=10, c='grey', edgecolor='paleturquoise',
-                                #    marker='o', depthshade=False, zorder=0,
-                                #    alpha=0.8)
+            tdScatter = ax.scatter(td[:,0],td[:,1],td[:,zidx],
+                                   s=10, c='grey', edgecolor='black',
+                                   marker='o', depthshade=False, zorder=0,
+                                   alpha=0.8)
 
         leg_art.append(tdScatter)
         leg_lable.append('Trace Data')
+
+    # for trace in f.read().splitlines():
+    if len(trace_file_lists) > 0:
+        print('normalized trace data groups')
+        #load training trace date yaml file
+        for trace_list in trace_file_lists:
+            print(trace_list)
+
+            if 'dom' in trace_list:
+                eColor = 'red'
+                label = 'dominant hand trace data'
+            elif 'non' in trace_list:
+                eColor = 'blue'
+                label = 'non-dominant hand trace data'
+            else:
+                eColor = 'green'
+                label = trace_list + ' trace data'
+
+            for trace in open(trace_list).read().splitlines():
+                print(' ',trace)
+                td = td_arrayfromyaml(trace)
+
+                tdScatter = ax.scatter(td[:,0],td[:,1],td[:,zidx],
+                                       s=10, c='grey', edgecolor=eColor,
+                                       marker='o', depthshade=False, zorder=0,
+                                       alpha=0.8)
+
+            leg_art.append(tdScatter)
+            leg_lable.append(label)
 
     frames = []
 
@@ -190,13 +221,15 @@ def plot(harp_files, zdata, gif, png, show):
                                           tuple(con[1,[0,1,zidx]])] for con in links], lw=0.5)
 
             lc.set_color('coral')
-            ntlines = ax.add_collection(lc)
+            ntLines = ax.add_collection(lc)
             ntScatter = ax.scatter(stnw[:,0],stnw[:,1],stnw[:,zidx],
                                   s=30, c='crimson', edgecolor='coral', marker='o',
                                   depthshade=False)
 
-            frames.append([ntlines,ntScatter])
+            frames.append([ntLines,ntScatter])
 
+        leg_art.append((ntLines,ntScatter))
+        leg_lable.append('Spatio-temporal Neurons')
 
     elif len(neural_net_files) > 0:
         print('Plotting neural network and links...')
@@ -222,7 +255,7 @@ def plot(harp_files, zdata, gif, png, show):
 
 
     legend = ax.legend(leg_art,leg_lable,
-                       fontsize='medium', loc='lower right')
+                       fontsize='large', loc='lower right')
 
     legend.get_frame().set_edgecolor('darkgray')
 
@@ -233,13 +266,13 @@ def plot(harp_files, zdata, gif, png, show):
 
     if gif:
         if len(frames) > 0:
-            ani.save('harp_plot.gif', writer='imagemagick');
+            ani.save('harp_plot.gif', writer='imagemagick')
         else:
             fig.savefig('harp_plot.gif')
 
     if png:
         if len(frames) > 0:
-            ani.save('harp_plot.png', writer='imagemagick');
+            ani.save('harp_plot.png', writer='imagemagick')
         else:
             fig.savefig('harp_plot.png')
 
@@ -248,6 +281,44 @@ def plot(harp_files, zdata, gif, png, show):
         plt.show()
 
 
+###############################################################################
+# Data manipulation
+###############################################################################
+def data(harp_file_list, output):
+    import yaml
+    import numpy as np
+    import csv
+    import os
+
+    #make csv directory, if it exists ignore error
+    if not os.path.isdir(output):
+        os.makedirs(output)
+
+    for f in open(harp_file_list).read().splitlines():
+        print(f)
+
+        yamlDoc = yaml.load(open(f))
+
+        (csvdir, csvfile) = os.path.split(f)
+
+        csvdir = os.path.join(output, csvdir)
+        csvfile = os.path.splitext(csvfile)[0] + '.' + output
+
+        if not os.path.isdir(csvdir):
+            os.makedirs(csvdir)
+
+        csvpath = os.path.join(csvdir,csvfile)
+
+        with open(csvpath, 'w') as csvDoc:
+            wr = csv.writer(csvDoc)
+
+            for row in yamlDoc['events']:
+                wr.writerow(row)
+
+
+###############################################################################
+# Command parser
+###############################################################################
 if __name__ == "__main__":
     import argparse
     import time
@@ -256,7 +327,7 @@ if __name__ == "__main__":
 
     commandParser.add_argument('command',
                                action='store',
-                               choices=['train', 'eval', 'plot'],
+                               choices=['train', 'eval', 'plot','data'],
                                help='Select operating mode')
 
     commandParser.add_argument('args', nargs=argparse.REMAINDER)
@@ -326,3 +397,21 @@ if __name__ == "__main__":
 
         plot(plotArgs.harp_files, plotArgs.zdata,
              plotArgs.gif, plotArgs.png, plotArgs.show)
+
+
+    elif commandArgs.command == 'data':
+        dataParser = argparse.ArgumentParser("manipulate harp data")
+
+        dataParser.add_argument('-o','--output',
+                                action='store',
+                                default='csv',
+                                choices=['csv'],
+                                help='Select output format')
+
+        dataParser.add_argument('harp_file_list',
+                                # nargs='+',
+                                help='One or more harp files')
+
+        dataArgs = dataParser.parse_args(commandArgs.args)
+
+        data(dataArgs.harp_file_list, dataArgs.output)
