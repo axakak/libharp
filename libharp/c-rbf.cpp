@@ -23,9 +23,9 @@ Complex SpatioTemporalNeuron::computeGain(const Event& event) const
          y = event.y-weight.y,
          z = event.z-weight.z;
 
-  Complex gain(sqrt(( (x*x)+(y*y)+(z*z) )/3 ), event.time-weight.time);
+  Complex gain( sqrt( ((x*x)+(y*y)+(z*z)) / 3 ), event.time-weight.time);
 
-  //reduce gain phase to <-pi;pi>
+  //reduce gain phase to interval [-pi,pi]
   if(gain.phase > g_pi)
     gain.phase -= 2*g_pi;
   else if(gain.phase < -g_pi)
@@ -38,12 +38,15 @@ Complex SpatioTemporalNeuron::computeGain(const Event& event) const
 double SpatioTemporalNeuron::computeDistance(const Event& event) const
 {
   //TODO: revaluate the correctness of this method, consolidate with compute gain
-  double x = event.x-weight.x,
-         y = event.y-weight.y,
-         z = event.z-weight.z,
-         time = (event.time-weight.time)/g_pi;
+  // double x = event.x-weight.x,
+  //        y = event.y-weight.y,
+  //        z = event.z-weight.z,
+  //        time = (event.time-weight.time)/g_pi;
+  // Implemented correction, must rerun simulations
 
-  return ((x*x) + (y*y) + (z*z) + (time*time));
+  Complex gain = computeGain(event);
+
+  return (gain.amplitude*gain.amplitude + (gain.phase/g_pi)*(gain.phase/g_pi));
 }
 
 
