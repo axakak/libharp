@@ -130,6 +130,47 @@ def plot(harp_files, zdata, gif, png, show):
     # display results
     print('\x1B[34m==> \x1B[0m Plotting')
 
+    # vtk plot #################################################################
+
+    import vtk
+
+
+    if len(trace_files) == 1:
+
+        td = td_arrayfromyaml(trace_files[0])
+
+        view = vtk.vtkContextView()
+        view.GetRenderer().SetBackground(1.0, 1.0, 1.0)
+        view.GetRenderWindow().SetSize(400, 300)
+
+        chart = vtk.vtkChartXYZ()
+        view.GetScene().AddItem(chart)
+        chart.SetShowLegend(True)
+#TODO: construct vtkPolyData()
+
+        points = chart.AddPlot(vtk.vtkChart.POINTS)
+        points.SetInputData(table, 0, 1)
+        points.SetColor(0, 0, 0, 255)
+        points.SetWidth(1.0)
+        points.SetMarkerStyle(vtk.vtkPlotPoints.CROSS)
+
+        points = chart.AddPlot(vtk.vtkChart.POINTS)
+        points.SetInputData(table, 0, 2)
+        points.SetColor(0, 0, 0, 255)
+        points.SetWidth(1.0)
+        points.SetMarkerStyle(vtk.vtkPlotPoints.PLUS)
+
+        points = chart.AddPlot(vtk.vtkChart.POINTS)
+        points.SetInputData(table, 0, 3)
+        points.SetColor(0, 0, 255, 255)
+        points.SetWidth(1.0)
+        points.SetMarkerStyle(vtk.vtkPlotPoints.CIRCLE)
+
+        view.GetRenderWindow().SetMultiSamples(0)
+        view.GetInteractor().Initialize()
+        view.GetInteractor().Start()
+
+
     #setup 3D subplot
     x,y = plt.figaspect(.75)*1.5
     fig = plt.figure(figsize=(x,y), tight_layout=True)
