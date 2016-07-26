@@ -11,7 +11,7 @@ from multiprocessing import Pool
 
 def harpTrainEval(i):
 
-    outDirStr = 'harp_{}_class_{}_of_{}'.format(len(args.class_list_files),i+1,len(traceFiles))
+    outDirStr = 'harp_{}_class_{:0=3}_of_{:0=3}'.format(len(args.class_list_files),i+1,len(traceFiles))
 
     # create directory for current test run
     Path(outDirStr).mkdir(exist_ok=True)
