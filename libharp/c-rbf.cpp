@@ -1,6 +1,6 @@
 #include "c-rbf.h"
 
-#include <thread>
+// #include <thread>
 #include <random>
 #include <algorithm>
 #include <fstream>
@@ -37,16 +37,9 @@ Complex SpatioTemporalNeuron::computeGain(const Event& event) const
 
 double SpatioTemporalNeuron::computeDistance(const Event& event) const
 {
-  //TODO: revaluate the correctness of this method, consolidate with compute gain
-  // double x = event.x-weight.x,
-  //        y = event.y-weight.y,
-  //        z = event.z-weight.z,
-  //        time = (event.time-weight.time)/g_pi;
-  // Implemented correction, must rerun simulations
-
   Complex gain = computeGain(event);
 
-  return (gain.amplitude*gain.amplitude + (gain.phase/g_pi)*(gain.phase/g_pi));
+  return gain.amplitude*gain.amplitude + (gain.phase/g_pi)*(gain.phase/g_pi);
 }
 
 
@@ -135,9 +128,13 @@ void SpatioTemporalNeuron::neighbourWithLargestError(const SpatioTemporalNeuron*
 void SpatioTemporalNeuron::exportConnectionsYaml(YAML::Emitter& e)
 {
   for(auto &edge : edges)
-    if(!(index > edge.first->index))
+  {
+    if(index < edge.first->index)//export only one egde pair, [1,3], not [3,1]
+    {
       e  << YAML::Flow
          << YAML::BeginSeq << index << edge.first->index << YAML::EndSeq;
+    }
+  }
 }
 
 /* SpatioTemporalLayer *******************************************************/
@@ -206,10 +203,12 @@ vector<Complex> SpatioTemporalLayer::evaluate(const Event& event) const
 }
 
 
-void SpatioTemporalLayer::train(vector<TraceData>& tdv, int ageMax, int insertionInterval, int reportCount)
+void SpatioTemporalLayer::train(vector<TraceData>& tdv, int ageMax, int insertInterval, int reportCount)
 {
-  cout << "\x1B[36m==>\x1B[0m " << "Training spatio-temporal"
-       << " layer using growing neural-gas algorithm" << endl;
+  cout << "\x1B[36m==>\x1B[0m " << "Training spatio-temporal "
+       << "layer using growing neural-gas algorithm" << endl
+       << "Maximum edge age: " << ageMax << endl
+       << "Insert interval: " << insertInterval << endl;
 
   ofstream file("spatioTemporalTrain.yaml");
   file << "%YAML 1.2";
@@ -231,14 +230,19 @@ void SpatioTemporalLayer::train(vector<TraceData>& tdv, int ageMax, int insertio
   std::mt19937 randGen(rd());
   std::uniform_int_distribution<int> tdDistrobution(0,td.size());
 
-  unsigned int time = 0, maxTime, reportInterval;
+  unsigned int time = 0, maxTime;
   int tdIndex = 0;
   SpatioTemporalNeuron *neuronS1 = NULL, *neuronS2 = NULL;
 
-  // align maxTime and reportInterval with insertionInterval
-  maxTime = int(100*td.size()/insertionInterval);
-  reportInterval = int(maxTime/(reportCount-2)) * insertionInterval;
-  maxTime *= insertionInterval;
+  // align maxTime with insertInterval
+  maxTime = int(float(td.size())/insertInterval) * insertInterval;//XXX: try less maxTime
+
+  vector<int> reportTimes(reportCount);
+
+  for(int k = reportCount-2; k > 0; k--)
+  {
+    reportTimes.push_back(pow(k/(reportCount-1.0), 4) * maxTime + (maxTime/reportCount));
+  }
 
   //steps correspond to B. Fritzke, A Growing Neural Gas Network... (1995)
   //STEP 0: Initialize 2 neurons at random positions
@@ -274,10 +278,13 @@ void SpatioTemporalLayer::train(vector<TraceData>& tdv, int ageMax, int insertio
 
     //step 8: If the number of input signals selected is a multiple of lam,
     //insert new neuron
-    if(!(time%insertionInterval))
+    if(!(time%insertInterval))
     {
-      if(!(time%reportInterval))
+      if(time >= reportTimes.back())
+      {
         file << endl << "---" << endl << exportYamlString();
+        reportTimes.pop_back();
+      }
 
       //find the neuron q with max accumulated error
       for(auto &neuron : neurons)
@@ -609,6 +616,9 @@ void ClassLayer::train(SpatioTemporalLayer& stl, const vector<TraceData>& tdv)
     SpatioTemporalNeuron *nNeuron = NULL;
     int group = trace.getClassificationGroup();
 
+
+
+
     //for each event in trace
     for(auto &event : trace)
     {
@@ -753,9 +763,6 @@ unordered_map<int,double> CRBFNeuralNetwork::evaluateTrace(const string& traceFi
 
 double CRBFNeuralNetwork::computeErrorIncrement(const Complex& gain, int tdSize) const
 {
-  double Ys = 1, // spacial priority
-         Yt = 1; // temporal priority
-
   return (1/(tdSize*hypot(Ys,Yt))) * hypot(Ys*gain.amplitude, Yt*gain.phase/g_pi);
 }
 
@@ -775,6 +782,8 @@ void CRBFNeuralNetwork::train(const string& traceFileList)
 
   // train Spatio Temporal Layer
   stLayer.train(traces, 50, 60000, 10);
+
+cout << "In CRBF Neural Net\n";
 
   // train Class Layer
   cLayer.train(stLayer,traces);
@@ -799,13 +808,13 @@ void CRBFNeuralNetwork::exportYamlFile(const string& nnFile)
 void CRBFNeuralNetwork::loadCRBFNeuralNetworkFile(const string& crbfFile)
 {
   cout << "\x1B[36m==>\x1B[0m "
-       <<  "Loading C-RBF neural network from "
-       << "\x1B[32m" << crbfFile << "\x1B[0m" << endl;
+       << "Loading C-RBF neural network from "
+       << "\x1B[32m" << crbfFile << "\x1B[0m" << endl
+       << "Spatial priority: " << "\x1B[32m" << Ys << "\x1B[0m" << endl
+       << "Temporal priority: " << "\x1B[32m" << Yt << "\x1B[0m" << endl ;
 
   stLayer.loadFile(crbfFile);
   cLayer.loadFile(crbfFile);
-
-  //exportYamlFile("check_" + crbfFile);
 }
 
 
