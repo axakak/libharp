@@ -401,7 +401,7 @@ if __name__ == "__main__":
 
         plotArgs = plotParser.parse_args(commandArgs.args)
 
-        plot(plotArgs.harp_files, plotArgs.zdata,
+        harp_plot(plotArgs.harp_files, plotArgs.zdata,
              plotArgs.gif, plotArgs.png, plotArgs.show)
 
 
