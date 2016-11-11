@@ -77,6 +77,7 @@ def td_arrayfromyaml(trace):
     import yaml
     import numpy as np
 
+    # TODO: change from skip constant, to percentage of total events
     skip = 200
     yamlDoc = yaml.load(open(trace))
 
@@ -95,8 +96,7 @@ def harp_plot(harp_files, zdata, gif, png, show):
     import yaml
     import os
 
-
-# file Parsing #################################################################
+    # file Parsing ############################################################
 
     trace_files = []
     trace_file_lists = []
@@ -126,7 +126,7 @@ def harp_plot(harp_files, zdata, gif, png, show):
     # display results
     print('\x1B[34m==> \x1B[0m Plotting')
 
-    # matplotlib plot ##########################################################
+    # matplotlib plot #########################################################
 
     import numpy as np
     import matplotlib.pyplot as plt
@@ -329,18 +329,18 @@ if __name__ == "__main__":
     import argparse
     import time
 
-    commandParser = argparse.ArgumentParser(description="harp command line utility")
+    cl_parser = argparse.ArgumentParser(description="harp command line utility")
 
-    commandParser.add_argument('command',
+    cl_parser.add_argument('command',
                                action='store',
                                choices=['train', 'eval', 'plot','data'],
                                help='Select operating mode')
 
-    commandParser.add_argument('args', nargs=argparse.REMAINDER)
+    cl_parser.add_argument('args', nargs=argparse.REMAINDER)
 
-    commandArgs = commandParser.parse_args()
+    cl_args = cl_parser.parse_args()
 
-    if commandArgs.command == 'train':
+    if cl_args.command == 'train':
         trainParser = argparse.ArgumentParser("Train neural network")
 
         trainParser.add_argument('trace_list_file',
@@ -352,7 +352,7 @@ if __name__ == "__main__":
                                  default='crbfNeuralNet.yaml',
                                  help='Export trained nueral network to <ofile>')
 
-        trainArgs = trainParser.parse_args(commandArgs.args)
+        trainArgs = trainParser.parse_args(cl_args.args)
 
         sTime = time.time()
         harp_train(trainArgs.trace_list_file, trainArgs.out_file)
@@ -361,7 +361,7 @@ if __name__ == "__main__":
         print('Training completed in {:n}m{:.0f}s'.format(dTime//60, dTime%60))
 
 
-    elif commandArgs.command == 'eval':
+    elif cl_args.command == 'eval':
         evalParser = argparse.ArgumentParser("Evaluate trace")
 
         evalParser.add_argument('neural_net_file',
@@ -370,7 +370,7 @@ if __name__ == "__main__":
         evalParser.add_argument('trace_file',
                                 help='trace to be evaluated')
 
-        evalArgs = evalParser.parse_args(commandArgs.args)
+        evalArgs = evalParser.parse_args(cl_args.args)
 
         sTime = time.time()
         harp_eval(evalArgs.neural_net_file, evalArgs.trace_file)
@@ -379,7 +379,7 @@ if __name__ == "__main__":
         print('Evaluation completed in {:n}m{:.0f}s'.format(dTime//60, dTime%60))
 
 
-    elif commandArgs.command == 'plot':
+    elif cl_args.command == 'plot':
         plotParser = argparse.ArgumentParser("visualize the input and output of harp")
 
         plotParser.add_argument('-z','--zdata',
@@ -399,13 +399,13 @@ if __name__ == "__main__":
                                 nargs='+',
                                 help='One or more harp files to be plotted')
 
-        plotArgs = plotParser.parse_args(commandArgs.args)
+        plotArgs = plotParser.parse_args(cl_args.args)
 
         harp_plot(plotArgs.harp_files, plotArgs.zdata,
-             plotArgs.gif, plotArgs.png, plotArgs.show)
+                  plotArgs.gif, plotArgs.png, plotArgs.show)
 
 
-    elif commandArgs.command == 'data':
+    elif cl_args.command == 'data':
         dataParser = argparse.ArgumentParser("manipulate harp data")
 
         dataParser.add_argument('-o','--output',
@@ -418,6 +418,6 @@ if __name__ == "__main__":
                                 # nargs='+',
                                 help='One or more harp files')
 
-        dataArgs = dataParser.parse_args(commandArgs.args)
+        dataArgs = dataParser.parse_args(cl_args.args)
 
         data(dataArgs.harp_file_list, dataArgs.output)
