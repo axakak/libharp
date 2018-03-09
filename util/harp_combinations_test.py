@@ -9,8 +9,9 @@ from pathlib import Path
 from multiprocessing import Pool
 
 def getOutDirStr(i):
+    class_count = len(args.class_list_files)
 
-    return 'harp_{}_class_{:0=3}_of_{:0=3}'.format(len(args.class_list_files),i+1,traceCount)
+    return 'harp_{}_class_{:0=3}_of_{:0=3}'.format(class_count,i+1,traceCount)
 
 def harpTrainEval(i):
 
@@ -44,6 +45,8 @@ def harpTrainEval(i):
 
     _harpTrain(trainListStr, log)
     _harpEval(i, evalListStr, outDirStr, log)
+
+    os.chdir('..')
 
 
 def _harpTrain(trainListStr, log):
@@ -125,7 +128,7 @@ if __name__ == "__main__":
 
     parser.add_argument('-p','--processes',
                         choices=range(1, os.cpu_count()+1),
-                        default=os.cpu_count()/2,
+                        default=int(os.cpu_count()/2),
                         type=int,
                         help='number of worker processes to use. default: (cpu count)/2')
 
