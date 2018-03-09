@@ -73,7 +73,7 @@ private:
   Event weight;
   size_t index;
   double error;
-  unordered_map<SpatioTemporalNeuron*, int> edges;
+  unordered_map<SpatioTemporalNeuron*, int> edges;//<connected neuron, edge age>
 };
 
 
@@ -164,7 +164,7 @@ private:
 class CRBFNeuralNetwork
 {
 public:
-  CRBFNeuralNetwork(){};
+  CRBFNeuralNetwork():Ys(1.0),Yt(1.0){};
 
   unordered_map<int,double> evaluateTrace(const string& traceFile) const;
 
@@ -178,6 +178,10 @@ private:
   /* Neural Network Layers */
   SpatioTemporalLayer stLayer;
   ClassLayer cLayer;
+
+  double Ys; // spacial priority
+  double Yt; // temporal priority
+
 };
 
 

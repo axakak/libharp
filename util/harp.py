@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-
 def find_bin(name):
     import os
 
@@ -14,7 +13,7 @@ def find_bin(name):
     else:
         print('Error: utility only works when run from inside project' )
 
-    binPath = os.path.join(libDir,'build','util', name)
+    binPath = os.path.join(libDir, 'build', 'util', name)
 
     if os.path.isfile(binPath):
         return binPath
@@ -25,7 +24,7 @@ def find_bin(name):
 ###############################################################################
 # Train Neural Network
 ###############################################################################
-def train(in_file, out_file='crbfNeuralNet.yaml'):
+def harp_train(in_file, out_file='crbfNeuralNet.yaml'):
     import subprocess as sub
     from datetime import datetime
 
@@ -42,7 +41,7 @@ def train(in_file, out_file='crbfNeuralNet.yaml'):
         so = line.decode()
         out.append(so)
         if '==>' in so:
-            so = so.replace('\n','') + datetime.today().strftime(" [%H:%M:%S]\n")
+            so = so.replace('\n', '') + datetime.today().strftime(" [%H:%M:%S]\n")
 
         print(so, end='')
 
@@ -51,7 +50,7 @@ def train(in_file, out_file='crbfNeuralNet.yaml'):
 ###############################################################################
 # Evaluate Neural Network
 ###############################################################################
-def eval(neural_net, trace):
+def harp_eval(neural_net, trace):
     import subprocess as sub
 
     harpEval = find_bin('harpevaluate')
@@ -78,6 +77,7 @@ def td_arrayfromyaml(trace):
     import yaml
     import numpy as np
 
+    # TODO: change from skip constant, to percentage of total events
     skip = 200
     yamlDoc = yaml.load(open(trace))
 
@@ -86,21 +86,17 @@ def td_arrayfromyaml(trace):
     if yamlDoc['coordinate-space'] != 'normalized':
         tdMax = td.max(0)
         tdMin = td.min(0)
-        tdScale = np.array([1,1,1,2*np.pi]) / (tdMax - tdMin)
+        tdScale = np.array([1, 1, 1, 2*np.pi]) / (tdMax - tdMin)
         td = (td[:,:] - tdMin) * tdScale
 
     return td
 
 
-def plot(harp_files, zdata, gif, png, show):
+def harp_plot(harp_files, zdata, gif, png, show):
     import yaml
     import os
-    import numpy as np
-    import matplotlib.pyplot as plt
-    import matplotlib.animation as animation
-    from mpl_toolkits.mplot3d import axes3d, art3d
 
-    plt.rc('font', family = 'serif', serif = 'CMU Serif')
+    # file Parsing ############################################################
 
     trace_files = []
     trace_file_lists = []
@@ -130,6 +126,16 @@ def plot(harp_files, zdata, gif, png, show):
     # display results
     print('\x1B[34m==> \x1B[0m Plotting')
 
+    # matplotlib plot #########################################################
+
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import matplotlib.animation as animation
+    from mpl_toolkits.mplot3d import axes3d, art3d
+
+    # set font
+    plt.rc('font', family = 'serif', serif = 'CMU Serif')
+
     #setup 3D subplot
     x,y = plt.figaspect(.75)*1.5
     fig = plt.figure(figsize=(x,y), tight_layout=True)
@@ -157,7 +163,7 @@ def plot(harp_files, zdata, gif, png, show):
         ax.set_zlabel('time')
         ax.set_zlim(0, 2*np.pi)
         ax.set_zticks([0, np.pi, 2*np.pi])
-        ax.set_zticklabels(['0', '$\pi$','2$\pi$'])
+        ax.set_zticklabels(['0', '$\pi$', '2$\pi$'])
 
     leg_art = []
     leg_lable = []
@@ -323,18 +329,18 @@ if __name__ == "__main__":
     import argparse
     import time
 
-    commandParser = argparse.ArgumentParser(description="harp command line utility")
+    cl_parser = argparse.ArgumentParser(description="harp command line utility")
 
-    commandParser.add_argument('command',
+    cl_parser.add_argument('command',
                                action='store',
                                choices=['train', 'eval', 'plot','data'],
                                help='Select operating mode')
 
-    commandParser.add_argument('args', nargs=argparse.REMAINDER)
+    cl_parser.add_argument('args', nargs=argparse.REMAINDER)
 
-    commandArgs = commandParser.parse_args()
+    cl_args = cl_parser.parse_args()
 
-    if commandArgs.command == 'train':
+    if cl_args.command == 'train':
         trainParser = argparse.ArgumentParser("Train neural network")
 
         trainParser.add_argument('trace_list_file',
@@ -346,16 +352,16 @@ if __name__ == "__main__":
                                  default='crbfNeuralNet.yaml',
                                  help='Export trained nueral network to <ofile>')
 
-        trainArgs = trainParser.parse_args(commandArgs.args)
+        trainArgs = trainParser.parse_args(cl_args.args)
 
         sTime = time.time()
-        train(trainArgs.trace_list_file, trainArgs.out_file)
+        harp_train(trainArgs.trace_list_file, trainArgs.out_file)
         eTime = time.time()
         dTime = eTime-sTime
         print('Training completed in {:n}m{:.0f}s'.format(dTime//60, dTime%60))
 
 
-    elif commandArgs.command == 'eval':
+    elif cl_args.command == 'eval':
         evalParser = argparse.ArgumentParser("Evaluate trace")
 
         evalParser.add_argument('neural_net_file',
@@ -364,16 +370,16 @@ if __name__ == "__main__":
         evalParser.add_argument('trace_file',
                                 help='trace to be evaluated')
 
-        evalArgs = evalParser.parse_args(commandArgs.args)
+        evalArgs = evalParser.parse_args(cl_args.args)
 
         sTime = time.time()
-        eval(evalArgs.neural_net_file, evalArgs.trace_file)
+        harp_eval(evalArgs.neural_net_file, evalArgs.trace_file)
         eTime = time.time()
         dTime = eTime-sTime
         print('Evaluation completed in {:n}m{:.0f}s'.format(dTime//60, dTime%60))
 
 
-    elif commandArgs.command == 'plot':
+    elif cl_args.command == 'plot':
         plotParser = argparse.ArgumentParser("visualize the input and output of harp")
 
         plotParser.add_argument('-z','--zdata',
@@ -393,13 +399,13 @@ if __name__ == "__main__":
                                 nargs='+',
                                 help='One or more harp files to be plotted')
 
-        plotArgs = plotParser.parse_args(commandArgs.args)
+        plotArgs = plotParser.parse_args(cl_args.args)
 
-        plot(plotArgs.harp_files, plotArgs.zdata,
-             plotArgs.gif, plotArgs.png, plotArgs.show)
+        harp_plot(plotArgs.harp_files, plotArgs.zdata,
+                  plotArgs.gif, plotArgs.png, plotArgs.show)
 
 
-    elif commandArgs.command == 'data':
+    elif cl_args.command == 'data':
         dataParser = argparse.ArgumentParser("manipulate harp data")
 
         dataParser.add_argument('-o','--output',
@@ -412,6 +418,6 @@ if __name__ == "__main__":
                                 # nargs='+',
                                 help='One or more harp files')
 
-        dataArgs = dataParser.parse_args(commandArgs.args)
+        dataArgs = dataParser.parse_args(cl_args.args)
 
         data(dataArgs.harp_file_list, dataArgs.output)
